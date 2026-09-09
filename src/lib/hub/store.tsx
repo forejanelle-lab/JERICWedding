@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEFAULT_VIS, SEED_ANNOUNCEMENTS, SEED_GUESTBOOK, SEED_GUESTS, SEED_INVITES, SEED_MESSAGES, SEED_PHOTOS, SEED_RIDES, SEED_RSVPS, SEED_SONGS } from "@/lib/hub/seed";
+import { DEFAULT_VIS } from "@/lib/hub/seed";
 import type {
   Announcement,
   ChatChannel,
@@ -42,7 +42,7 @@ import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/ad
 import { collectHubEmails } from "@/lib/rides/emails";
 import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 
-const STORAGE_KEY = "jeric-hub-v2";
+const STORAGE_KEY = "jeric-hub-v3";
 const DEFAULT_HERO = "/images/casale-bosco.jpg";
 
 function persistHubState(state: HubState) {
@@ -68,16 +68,16 @@ function persistHubState(state: HubState) {
 
 const EMPTY_STATE: HubState = {
   identity: null,
-  guests: SEED_GUESTS,
-  invites: SEED_INVITES,
-  rides: SEED_RIDES,
+  guests: [],
+  invites: [],
+  rides: [],
   seatAsks: [],
-  messages: SEED_MESSAGES,
-  guestbook: SEED_GUESTBOOK,
-  songs: SEED_SONGS,
-  photos: SEED_PHOTOS,
-  announcements: SEED_ANNOUNCEMENTS,
-  rsvps: SEED_RSVPS,
+  messages: [],
+  guestbook: [],
+  songs: [],
+  photos: [],
+  announcements: [],
+  rsvps: [],
   savedPlaces: [],
   gameScores: {},
   predictions: {},
@@ -246,10 +246,17 @@ export function HubProvider({
         setState({
           ...EMPTY_STATE,
           ...parsed,
-          guests: parsed.guests?.length ? parsed.guests : SEED_GUESTS,
-          songs: (parsed.songs?.length ? parsed.songs : SEED_SONGS).map((song) =>
+          guests: Array.isArray(parsed.guests) ? parsed.guests : [],
+          songs: (Array.isArray(parsed.songs) ? parsed.songs : []).map((song) =>
             migrateSong(song as Song & { votes?: string[] }),
           ),
+          rides: Array.isArray(parsed.rides) ? parsed.rides : [],
+          seatAsks: Array.isArray(parsed.seatAsks) ? parsed.seatAsks : [],
+          messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+          guestbook: Array.isArray(parsed.guestbook) ? parsed.guestbook : [],
+          photos: Array.isArray(parsed.photos) ? parsed.photos : [],
+          announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
+          rsvps: Array.isArray(parsed.rsvps) ? parsed.rsvps : [],
           heroImage:
             !parsed.heroImage || parsed.heroImage === "/images/amalfi-coast.jpg"
               ? DEFAULT_HERO
@@ -259,7 +266,7 @@ export function HubProvider({
           siteHidden: parsed.siteHidden ?? [],
           hiddenPages: parsed.hiddenPages ?? [],
           siteEditing: false,
-          invites: (parsed.invites?.length ? parsed.invites : SEED_INVITES).map((invite) => ({
+          invites: (Array.isArray(parsed.invites) ? parsed.invites : []).map((invite) => ({
             ...invite,
             tags: invite.tags?.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
             invited: invite.invited !== false,
@@ -1052,7 +1059,11 @@ export function HubProvider({
 
   const resetHub = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
-    setState(EMPTY_STATE);
+    window.localStorage.removeItem("jeric-hub-v2");
+    window.localStorage.removeItem("jeric-gate-email");
+    window.localStorage.removeItem("jeric-gate-name");
+    void fetch("/api/rides/digest", { method: "DELETE" }).catch(() => undefined);
+    setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);
 
   const value = useMemo<HubContextValue>(

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { queueDigestPost, syncDigestEmails } from "@/lib/rides/store";
+import { queueDigestPost, resetDigestStore, syncDigestEmails } from "@/lib/rides/store";
 import type { RideKind } from "@/lib/hub/types";
 
 type QueueBody = {
@@ -40,5 +40,10 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const body = (await request.json()) as { emails?: string[] };
   await syncDigestEmails(Array.isArray(body.emails) ? body.emails : []);
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE() {
+  await resetDigestStore();
   return NextResponse.json({ ok: true });
 }

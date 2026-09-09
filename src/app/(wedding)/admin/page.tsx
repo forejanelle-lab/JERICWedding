@@ -56,7 +56,7 @@ export default function AdminPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button type="button" className="btn-secondary !px-4 !py-2" onClick={hub.resetHub}>Reset demo data</button>
+          <button type="button" className="btn-secondary !px-4 !py-2" onClick={hub.resetHub}>Clear all data</button>
           <button type="button" className="btn-secondary !px-4 !py-2" onClick={() => void signOut()}>Sign out</button>
         </div>
       </div>

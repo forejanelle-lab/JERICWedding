@@ -246,3 +246,15 @@ export async function markPostsSent(ids: string[]) {
   await saveDigestStore(next);
   return next;
 }
+
+export async function resetDigestStore() {
+  const next: DigestStore = {
+    subscribers: [],
+    unsubscribed: [],
+    posts: [],
+    sentPostIds: [],
+  };
+  memory().store = next;
+  await saveDigestStore(next);
+  return next;
+}
