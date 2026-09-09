@@ -4,13 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
-import { readFileAsDataUrl } from "@/lib/hub/utils";
+import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
 import type { PhotoAlbum } from "@/lib/hub/types";
 
 export function PhotoUpload({ next = "/photos" }: { next?: string }) {
-  const { state, uploadPhoto } = useHub();
+  const { state, ready, uploadPhoto } = useHub();
   const { t } = useI18n();
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [fileName, setFileName] = useState("");
+
+  if (!ready) return null;
 
   if (!state.identity) {
     return (
@@ -23,25 +28,32 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
     );
   }
 
-  if (sent) {
-    return (
-      <p className="font-script text-xl italic text-olive">
-        {t("photos.received")}
-      </p>
-    );
-  }
-
   return (
     <form
       className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
       onSubmit={async (event) => {
         event.preventDefault();
-        const data = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const data = new FormData(form);
         const file = data.get("file");
-        if (!(file instanceof File) || !file.size) return;
-        const src = await readFileAsDataUrl(file);
-        uploadPhoto(String(data.get("album")) as PhotoAlbum, String(data.get("caption")), src);
-        setSent(true);
+        if (!(file instanceof File) || !file.size) {
+          setError(t("photos.needFile"));
+          return;
+        }
+        setBusy(true);
+        setError("");
+        setSent(false);
+        try {
+          const src = await readImageAsCompressedDataUrl(file);
+          uploadPhoto(String(data.get("album")) as PhotoAlbum, String(data.get("caption") ?? "").trim(), src);
+          setSent(true);
+          setFileName("");
+          form.reset();
+        } catch {
+          setError(t("photos.error"));
+        } finally {
+          setBusy(false);
+        }
       }}
     >
       <label className="min-w-[8rem]">
@@ -60,11 +72,26 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
       </label>
       <label className="min-w-[10rem]">
         <span className="label-caps">{t("photos.file")}</span>
-        <input name="file" type="file" accept="image/*" required className="mt-3 font-sans text-sm" />
+        <input
+          name="file"
+          type="file"
+          accept="image/*,image/heic,image/heif"
+          required
+          className="mt-3 w-full max-w-[16rem] font-sans text-sm file:mr-3 file:rounded-full file:border-0 file:bg-olive file:px-3 file:py-1.5 file:font-sans file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-ivory"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            setFileName(file?.name ?? "");
+            setSent(false);
+            setError("");
+          }}
+        />
+        {fileName ? <p className="mt-1 font-sans text-[0.7rem] text-charcoal/55">{fileName}</p> : null}
       </label>
-      <button type="submit" className="btn-primary shrink-0">
-        {t("photos.uploadBtn")}
+      <button type="submit" disabled={busy} className="btn-primary shrink-0 disabled:opacity-60">
+        {busy ? t("photos.uploading") : t("photos.uploadBtn")}
       </button>
+      {sent ? <p className="w-full font-script text-xl italic text-olive">{t("photos.received")}</p> : null}
+      {error ? <p className="w-full font-sans text-sm text-olive">{error}</p> : null}
     </form>
   );
 }

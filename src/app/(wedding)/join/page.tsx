@@ -6,7 +6,7 @@ import { OPTIONAL_GUEST_CODE } from "@/lib/hub/content";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
-import { readFileAsDataUrl } from "@/lib/hub/utils";
+import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
 import type { Side } from "@/lib/hub/types";
 
 export default function JoinPage() {
@@ -98,7 +98,7 @@ function JoinForm() {
             const file = data.get("photo");
             let photoDataUrl: string | undefined;
             if (file instanceof File && file.size > 0) {
-              photoDataUrl = await readFileAsDataUrl(file);
+              photoDataUrl = await readImageAsCompressedDataUrl(file);
             }
             setPending({
               firstName: String(data.get("firstName")),

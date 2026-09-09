@@ -45,6 +45,27 @@ import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 const STORAGE_KEY = "jeric-hub-v2";
 const DEFAULT_HERO = "/images/casale-bosco.jpg";
 
+function persistHubState(state: HubState) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    const dataPhotos = state.photos.filter((photo) => photo.src.startsWith("data:"));
+    const otherPhotos = state.photos.filter((photo) => !photo.src.startsWith("data:"));
+    const trimmed: HubState = {
+      ...state,
+      photos: [...dataPhotos.slice(0, 16), ...otherPhotos],
+      siteImages: Object.fromEntries(
+        Object.entries(state.siteImages).filter(([, src]) => !src.startsWith("data:")),
+      ),
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch {
+      // Keep the in-memory upload for this visit if storage is full.
+    }
+  }
+}
+
 const EMPTY_STATE: HubState = {
   identity: null,
   guests: SEED_GUESTS,
@@ -268,7 +289,7 @@ export function HubProvider({
 
   useEffect(() => {
     if (!ready) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    persistHubState(state);
   }, [state, ready]);
 
   useEffect(() => {
@@ -782,7 +803,7 @@ export function HubProvider({
         album,
         caption,
         src,
-        approved: false,
+        approved: true,
         createdAt: new Date().toISOString(),
       };
       return { ...prev, photos: [photo, ...prev.photos] };

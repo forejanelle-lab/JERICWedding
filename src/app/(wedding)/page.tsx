@@ -1,4 +1,3 @@
-import { ApplyGateIdentity } from "@/components/home/ApplyGateIdentity";
 import { GatePage } from "@/components/home/GatePage";
 import { HomePage } from "@/components/home/HomePage";
 import { getGateSession, hasAdminCookie } from "@/lib/gate/auth";
@@ -17,10 +16,5 @@ export default async function Page({
     return <GatePage next={safeNextPath(params.next)} />;
   }
 
-  return (
-    <>
-      {session ? <ApplyGateIdentity session={session} /> : null}
-      <HomePage />
-    </>
-  );
+  return <HomePage />;
 }

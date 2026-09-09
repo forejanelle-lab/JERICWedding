@@ -19,6 +19,7 @@ const OURS = [
 
 const ALBUMS: { id: PhotoAlbum | "all"; label: string }[] = [
   { id: "all", label: "All" },
+  { id: "recent", label: "Recent" },
   { id: "friday", label: "Saturday" },
   { id: "wedding", label: "Wedding" },
   { id: "sunday", label: "Monday" },
@@ -42,7 +43,11 @@ export default function PhotosPage() {
     [state.siteCopy, state.siteHidden, state.siteImages],
   );
   const visibleOurs = frames.filter((frame) => !frame.hidden);
-  const photos = state.photos.filter((photo) => photo.approved && (album === "all" || photo.album === album));
+  const photos = state.photos.filter((photo) => {
+    const mine = photo.authorId === state.identity?.guestId;
+    const visible = photo.approved || mine || state.adminAuthed;
+    return visible && (album === "all" || photo.album === album);
+  });
   const wallImages = useMemo(() => photos.map((photo) => ({ src: photo.src, caption: photo.caption })), [photos]);
   const oursImages = useMemo(
     () => visibleOurs.map((frame) => ({ src: frame.src, caption: frame.caption })),
@@ -98,13 +103,15 @@ export default function PhotosPage() {
                   label:
                     item.id === "all"
                       ? t("photos.all")
-                      : item.id === "friday"
-                        ? t("photos.saturday")
-                        : item.id === "wedding"
-                          ? t("photos.wedding")
-                          : item.id === "sunday"
-                            ? t("photos.monday")
-                            : t("photos.travel"),
+                      : item.id === "recent"
+                        ? t("photos.recent")
+                        : item.id === "friday"
+                          ? t("photos.saturday")
+                          : item.id === "wedding"
+                            ? t("photos.wedding")
+                            : item.id === "sunday"
+                              ? t("photos.monday")
+                              : t("photos.travel"),
                 }))}
               />
             </div>
@@ -112,7 +119,7 @@ export default function PhotosPage() {
               <p className="font-sans text-sm text-charcoal/55">{t("photos.empty")}</p>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                {photos.slice(0, 15).map((photo, index) => {
+                {photos.map((photo, index) => {
                   const canDelete = state.adminAuthed || state.identity?.guestId === photo.authorId;
                   return (
                     <figure key={photo.id} className="min-w-0">

@@ -97,6 +97,59 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+const MAX_PHOTO_EDGE = 1400;
+const JPEG_QUALITY = 0.74;
+
+function fitSize(width: number, height: number, maxEdge: number) {
+  const edge = Math.max(width, height);
+  if (edge <= maxEdge) return { width, height };
+  const scale = maxEdge / edge;
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
+
+function canvasToJpeg(source: CanvasImageSource, width: number, height: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  ctx.drawImage(source, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+}
+
+function loadHtmlImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("image"));
+    image.src = src;
+  });
+}
+
+export async function readImageAsCompressedDataUrl(file: File): Promise<string> {
+  if (!file.size) throw new Error("empty");
+  if (file.type && !file.type.startsWith("image/")) throw new Error("not-image");
+
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(file);
+      try {
+        const size = fitSize(bitmap.width, bitmap.height, MAX_PHOTO_EDGE);
+        return canvasToJpeg(bitmap, size.width, size.height);
+      } finally {
+        bitmap.close();
+      }
+    }
+  } catch {
+    // HEIC and some phone formats fail here; try a regular image decode next.
+  }
+
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = await loadHtmlImage(dataUrl);
+  const size = fitSize(image.naturalWidth || image.width, image.naturalHeight || image.height, MAX_PHOTO_EDGE);
+  return canvasToJpeg(image, size.width, size.height);
+}
+
 export function parseInviteCsv(text: string): InviteRecord[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (lines.length < 2) return [];
