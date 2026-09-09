@@ -39,8 +39,14 @@ async function readInitialLocale(): Promise<Locale> {
   );
 }
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
   title: "Janelle & Eric | September 4–6, 2027 · Campania, Italy",
   description:
     "A wedding weekend in Campania — story, travel, community, and celebration for Janelle & Eric.",

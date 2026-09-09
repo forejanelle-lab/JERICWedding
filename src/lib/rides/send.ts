@@ -3,7 +3,10 @@ import { unsubscribeUrl } from "@/lib/rides/token";
 import { loadDigestStore, markPostsSent, pendingDigestPosts, type DigestPost } from "@/lib/rides/store";
 
 function siteOrigin() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
 }
 
 function lineFor(post: DigestPost) {
