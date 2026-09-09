@@ -102,14 +102,14 @@ export default function RsvpPage() {
 
   if (done) {
     return (
-      <main className="pt-24 md:pt-28">
+      <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
         <SectionWrap className="bg-ivory">
           <div className="mx-auto max-w-lg text-center">
             <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-sage/20 font-serif text-4xl text-forest">
               ✓
             </div>
             <p className="font-script text-2xl italic text-taupe">Grazie</p>
-            <h1 className="mt-3 font-serif text-4xl font-light tracking-[0.1em] uppercase">
+            <h1 className="mt-3 font-serif text-[1.85rem] font-light leading-tight tracking-[0.06em] uppercase md:text-4xl md:tracking-[0.1em]">
               {form.attending ? t("rsvp.seeYou") : t("rsvp.missYou")}
             </h1>
             <p className="mt-5 font-sans text-charcoal/70">
@@ -131,7 +131,7 @@ export default function RsvpPage() {
   const label = t(`rsvp.step.${currentKey}`);
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <PageHeader eyebrow="Kindly reply" title="RSVP" description="Find your invitation — we'll fill in your party from our list." editId="rsvp" />
         <div className="mx-auto mt-10 flex max-w-xl justify-between gap-1">

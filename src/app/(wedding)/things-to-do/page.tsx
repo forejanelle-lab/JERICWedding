@@ -18,7 +18,7 @@ export default function ThingsToDoPage() {
   const places = PLACES.filter((place) => cat === "all" || place.category === cat);
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory !py-12 md:!py-16">
         <PageHeader
           editId="todo"

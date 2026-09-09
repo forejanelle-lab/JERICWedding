@@ -35,7 +35,7 @@ export default function StoryPage() {
   const images = visible.map((frame) => ({ src: frame.src, caption: frame.caption }));
 
   return (
-    <main className="px-5 pt-20 pb-24 md:px-10 md:pt-[4.5rem] md:pb-12 lg:px-16">
+    <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-10 md:pt-[4.5rem] md:pb-12 lg:px-16">
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div>

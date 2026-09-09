@@ -40,16 +40,16 @@ export function PageHeader({
         <EditText
           id={`${editId}.title`}
           as="h1"
-          className={`font-serif font-light tracking-[0.12em] uppercase ${
-            compact ? "mt-1 text-3xl md:text-4xl" : "mt-3 text-3xl md:text-5xl"
+          className={`font-serif font-light leading-tight tracking-[0.06em] uppercase md:tracking-[0.12em] ${
+            compact ? "mt-1 text-[1.85rem] md:text-4xl" : "mt-3 text-[1.85rem] md:text-5xl"
           } ${dark ? "text-ivory" : "text-charcoal"}`}
         >
           {title}
         </EditText>
       ) : (
         <h1
-          className={`font-serif font-light tracking-[0.12em] uppercase ${
-            compact ? "mt-1 text-3xl md:text-4xl" : "mt-3 text-3xl md:text-5xl"
+          className={`font-serif font-light leading-tight tracking-[0.06em] uppercase md:tracking-[0.12em] ${
+            compact ? "mt-1 text-[1.85rem] md:text-4xl" : "mt-3 text-[1.85rem] md:text-5xl"
           } ${dark ? "text-ivory" : "text-charcoal"}`}
         >
           {title}
@@ -114,7 +114,7 @@ export function SectionWrap({
   className?: string;
 }) {
   return (
-    <section id={id} className={`${className} px-5 py-16 md:px-10 md:py-24 lg:px-16`}>
+    <section id={id} className={`${className} px-4 py-10 md:px-10 md:py-24 lg:px-16`}>
       {children}
     </section>
   );

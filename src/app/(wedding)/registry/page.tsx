@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/LanguageProvider";
 export default function RegistryPage() {
   const { t } = useI18n();
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <PageHeader
           editId="registry"

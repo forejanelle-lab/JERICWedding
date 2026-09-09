@@ -27,7 +27,7 @@ export default function WeekendPage() {
   }, [events, openId, state.siteHidden]);
 
   return (
-    <main className="pt-[3.4rem]">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-[3.4rem]">
       <SectionWrap className="bg-ivory !py-8 md:!py-10">
         <PageHeader
           compact
@@ -66,7 +66,7 @@ export default function WeekendPage() {
                           setOpenId(event.id);
                         }
                       }}
-                      className={`relative mb-2 w-full rounded-2xl border bg-ivory px-5 py-4 text-left transition-all ${
+                      className={`relative mb-2 min-h-[4.75rem] w-full rounded-2xl border bg-ivory px-4 py-4 text-left transition-all ${
                         hidden
                           ? "cursor-default border-taupe/20 opacity-55"
                           : "cursor-pointer border-taupe/15 hover:-translate-y-0.5 hover:border-forest/30 hover:shadow-[0_12px_30px_rgba(47,58,46,0.06)]"

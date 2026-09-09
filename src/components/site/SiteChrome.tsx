@@ -50,11 +50,11 @@ function SiteChromeInner({
     <>
       <SiteNav />
       <AdminBar />
-      <div className="min-h-full">
+      <div className="min-h-full pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0">
         <AccessGate href={pathname}>{children}</AccessGate>
       </div>
       {home ? null : <Footer />}
-      {home ? null : <MobileTabBar />}
+      <MobileTabBar />
     </>
   );
 }

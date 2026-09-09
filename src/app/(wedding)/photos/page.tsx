@@ -55,7 +55,7 @@ export default function PhotosPage() {
   );
 
   return (
-    <main className="pt-20 md:pt-24">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-20">
       <section className="px-5 py-10 md:px-10 md:py-12 lg:px-16">
         <div className="mx-auto max-w-5xl">
           <EditText id="photos.eyebrow" as="p" className="font-script text-xl italic text-taupe">

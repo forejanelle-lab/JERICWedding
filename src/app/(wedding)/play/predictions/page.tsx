@@ -16,7 +16,7 @@ export default function PredictionsPage() {
 
   if (state.adminAuthed && state.siteEditing) {
     return (
-      <main className="px-5 py-28">
+      <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
         <div className="mx-auto max-w-2xl">
           <p className="label-caps text-olive">{t("quiz.editGame")}</p>
           <h1 className="mt-2 font-serif text-3xl uppercase">Predictions</h1>
@@ -34,7 +34,7 @@ export default function PredictionsPage() {
   }
 
   return (
-    <main className="px-5 py-28">
+    <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
       <div className="mx-auto max-w-2xl">
         <EditText id="play.predictions.kicker" as="p" className="label-caps text-olive">
           Game 3

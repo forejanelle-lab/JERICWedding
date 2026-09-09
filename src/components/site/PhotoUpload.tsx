@@ -77,7 +77,7 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
           type="file"
           accept="image/*,image/heic,image/heif"
           required
-          className="mt-3 w-full max-w-[16rem] font-sans text-sm file:mr-3 file:rounded-full file:border-0 file:bg-olive file:px-3 file:py-1.5 file:font-sans file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-ivory"
+          className="mt-3 w-full font-sans text-sm file:mr-3 file:rounded-full file:border-0 file:bg-olive file:px-3 file:py-1.5 file:font-sans file:text-[0.62rem] file:uppercase file:tracking-[0.12em] file:text-ivory"
           onChange={(event) => {
             const file = event.target.files?.[0];
             setFileName(file?.name ?? "");

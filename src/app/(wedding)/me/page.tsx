@@ -18,7 +18,7 @@ export default function DashboardPage() {
 
   if (!state.identity || !me) {
     return (
-      <main className="pt-24 md:pt-28">
+      <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
         <SectionWrap>
           <PageHeader
             eyebrow="Personal, not public"
@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const myPoints = me.points;
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <p className="text-center font-script text-2xl italic text-taupe">{t("me.hi", { name: me.firstName })}</p>
         <h1 className="mt-2 text-center font-serif text-4xl font-light tracking-[0.1em] uppercase">{t("me.yourWeekend")}</h1>

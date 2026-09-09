@@ -11,7 +11,7 @@ export default function KnowUsPage() {
   const { t } = useI18n();
   const questions = state.gameQuestions["know-us"] ?? [];
   return (
-    <main className="px-5 py-28">
+    <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
       {state.adminAuthed && state.siteEditing ? (
         <div className="mx-auto mb-10 max-w-2xl">
           <p className="label-caps text-olive">{t("quiz.editGame")}</p>

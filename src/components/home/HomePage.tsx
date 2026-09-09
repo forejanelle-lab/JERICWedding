@@ -60,7 +60,7 @@ export function HomePage() {
         event.id === openId && canSeeEvent(state, event.id) && !isWeekendEventHidden(state, event.id),
     ) ?? null;
   return (
-    <main className="bg-[#F9F7F2] pb-16 pt-[3.4rem] text-[#242424] md:pb-20">
+    <main className="bg-[#F9F7F2] pb-8 pt-[calc(4.75rem+env(safe-area-inset-top))] text-[#242424] md:pb-20 md:pt-[3.4rem]">
       <div className="mx-auto max-w-[1320px] px-5 md:px-8 lg:px-12">
         <section className="grid items-end gap-4 py-8 md:grid-cols-2 md:gap-12 md:py-10">
           <div>
@@ -76,10 +76,10 @@ export function HomePage() {
               ) : null}
               !
             </div>
-            <EditText id="home.title" as="h1" className="mt-1 font-serif text-4xl font-light tracking-[0.06em] text-[#242424] uppercase md:text-5xl">
+            <EditText id="home.title" as="h1" className="mt-1 font-serif text-[2.15rem] font-light leading-tight tracking-[0.04em] text-[#242424] uppercase md:text-5xl md:tracking-[0.06em]">
               The Weekend
             </EditText>
-            <EditText id="home.dates" as="p" className="mt-2 font-sans text-[0.62rem] uppercase tracking-[0.2em] text-[#77736C]">
+            <EditText id="home.dates" as="p" className="mt-2 max-w-[16rem] font-sans text-[0.72rem] uppercase leading-relaxed tracking-[0.12em] text-[#77736C] md:max-w-none md:text-[0.62rem] md:tracking-[0.2em]">
               September 4–6, 2027 · Campania, Italy
             </EditText>
           </div>
@@ -117,22 +117,22 @@ export function HomePage() {
           {showPlay ? (
           <Link
             href="/play/know-us"
-            className="group relative overflow-hidden rounded-[20px] bg-[#2D3B2D] px-7 py-8 text-[#F9F7F2] md:min-h-[280px] md:px-9 md:py-10"
+            className="group relative overflow-hidden rounded-[20px] bg-[#2D3B2D] px-5 py-7 text-[#F9F7F2] md:min-h-[280px] md:px-9 md:py-10"
           >
-            <EditText id="home.quiz.kicker" as="p" className="font-sans text-[0.62rem] uppercase tracking-[0.22em] text-[#F9F7F2]/70">
+            <EditText id="home.quiz.kicker" as="p" className="font-sans text-[0.7rem] uppercase tracking-[0.16em] text-[#F9F7F2]/70 md:text-[0.62rem] md:tracking-[0.22em]">
               Play along
             </EditText>
-            <EditText id="home.quiz.title" as="h2" className="mt-4 max-w-[12rem] font-serif text-4xl font-light leading-[1.05] md:text-[2.6rem]">
+            <EditText id="home.quiz.title" as="h2" className="mt-4 max-w-[13.5rem] font-serif text-[2rem] font-light leading-[1.1] md:max-w-[12rem] md:text-[2.6rem]">
               Who said I love you first?
             </EditText>
-            <EditText id="home.quiz.sub" as="p" className="mt-5 max-w-[11rem] font-sans text-[0.62rem] uppercase tracking-[0.16em] text-[#F9F7F2]/65">
+            <EditText id="home.quiz.sub" as="p" className="mt-4 max-w-[14rem] font-sans text-[0.72rem] uppercase leading-relaxed tracking-[0.12em] text-[#F9F7F2]/70 md:max-w-[11rem] md:text-[0.62rem] md:tracking-[0.16em]">
               How well do you know the couple?
             </EditText>
-            <span className="mt-8 inline-flex items-center rounded-md border border-[#F9F7F2]/45 px-4 py-2.5 font-sans text-[0.62rem] uppercase tracking-[0.16em] transition-colors duration-200 group-hover:border-[#F9F7F2] group-hover:bg-[#F9F7F2]/10">
+            <span className="mt-7 inline-flex min-h-11 items-center rounded-md border border-[#F9F7F2]/45 px-4 py-2.5 font-sans text-[0.7rem] uppercase tracking-[0.14em] transition-colors duration-200 group-hover:border-[#F9F7F2] group-hover:bg-[#F9F7F2]/10 md:mt-8 md:text-[0.62rem] md:tracking-[0.16em]">
               {t("home.quiz.cta")}
               <span className="ml-2 transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </span>
-            <div className="pointer-events-none absolute -right-2 bottom-6 w-[42%] max-w-[180px] rotate-[8deg] sm:right-6 sm:bottom-8">
+            <div className="pointer-events-none absolute -right-3 bottom-4 hidden w-[38%] max-w-[180px] rotate-[8deg] sm:right-6 sm:bottom-8 sm:block">
               <div className="rounded-sm bg-[#F9F7F2] p-2 pb-7 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
                 <div className="relative aspect-[4/5] overflow-hidden bg-[#E6E0D7]">
                   <EditImage id="home.quiz.photo" src="/images/couple-hero.jpg" alt="Janelle and Eric" fill className="object-cover" sizes="180px" />
@@ -146,11 +146,11 @@ export function HomePage() {
           {showTravel ? (
           <Link href="/travel" className="group relative min-h-[280px] overflow-hidden rounded-[20px]">
             <EditImage id="home.travel.photo" src="/images/casale-bosco.jpg" alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" sizes="(min-width: 1024px) 50vw, 100vw" />
-            <div className="relative m-5 max-w-md rounded-[18px] bg-[#F9F7F2]/95 p-6 md:m-7 md:p-8">
+            <div className="relative m-4 max-w-md rounded-[18px] bg-[#F9F7F2]/95 p-5 md:m-7 md:p-8">
               <EditText id="home.travel.hand" as="p" className="font-hand text-2xl text-[#2D3B2D] md:text-3xl">
                 we&apos;re so happy
               </EditText>
-              <EditText id="home.travel.title" as="h2" className="mt-1 font-serif text-4xl font-light tracking-[0.06em] uppercase md:text-5xl">
+              <EditText id="home.travel.title" as="h2" className="mt-1 font-serif text-[2rem] font-light leading-tight tracking-[0.04em] uppercase md:text-5xl md:tracking-[0.06em]">
                 You&apos;re here
               </EditText>
               <div className="my-4 h-px w-16 bg-[#E6E0D7]" />
@@ -194,7 +194,7 @@ export function HomePage() {
                       <TimelineIcon name={event.icon} />
                     </span>
                     <div>
-                      <EditText id={`home.timeline.${event.day}.day`} as="p" className="font-sans text-[0.58rem] uppercase tracking-[0.18em] text-[#77736C]">
+                      <EditText id={`home.timeline.${event.day}.day`} as="p" className="font-sans text-[0.72rem] uppercase tracking-[0.12em] text-[#77736C] md:text-[0.58rem] md:tracking-[0.18em]">
                         {event.day}
                       </EditText>
                       <EditText id={`home.timeline.${event.day}.title`} as="p" className="mt-1 font-serif text-xl font-medium text-[#242424]">

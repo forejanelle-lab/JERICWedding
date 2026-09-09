@@ -47,7 +47,7 @@ export default function SongsPage() {
   }
 
   return (
-    <main className="pt-[3.4rem]">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-[3.4rem]">
       <SectionWrap className="bg-ivory !py-8 md:!py-10">
         <PageHeader
           compact

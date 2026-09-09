@@ -33,7 +33,7 @@ function JoinForm() {
 
   if (step === "done" && state.identity) {
     return (
-      <main className="pt-24 md:pt-28">
+      <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
         <SectionWrap>
           <PageHeader
             eyebrow="You're in"
@@ -52,7 +52,7 @@ function JoinForm() {
 
   if (step === "link") {
     return (
-      <main className="pt-24 md:pt-28">
+      <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
         <SectionWrap>
           <PageHeader
             eyebrow="Magic link"
@@ -77,7 +77,7 @@ function JoinForm() {
   }
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <PageHeader
           editId="join"

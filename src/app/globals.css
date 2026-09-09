@@ -33,7 +33,10 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 6rem;
+  scroll-padding-top: calc(5.25rem + env(safe-area-inset-top));
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -42,6 +45,13 @@ body {
   font-family: var(--font-jost), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
 }
 
 ::selection {
@@ -51,19 +61,19 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-3 border border-charcoal bg-charcoal px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-ivory transition-all duration-300 hover:bg-transparent hover:text-charcoal;
+    @apply inline-flex min-h-11 items-center justify-center gap-3 border border-charcoal bg-charcoal px-5 py-3 font-sans text-[0.72rem] uppercase tracking-[0.16em] text-ivory transition-all duration-300 hover:bg-transparent hover:text-charcoal md:min-h-0 md:px-7 md:py-3.5 md:text-[0.65rem] md:tracking-[0.28em];
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-3 border border-charcoal/20 bg-transparent px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-charcoal transition-all duration-300 hover:border-charcoal;
+    @apply inline-flex min-h-11 items-center justify-center gap-3 border border-charcoal/20 bg-transparent px-5 py-3 font-sans text-[0.72rem] uppercase tracking-[0.16em] text-charcoal transition-all duration-300 hover:border-charcoal md:min-h-0 md:px-7 md:py-3.5 md:text-[0.65rem] md:tracking-[0.28em];
   }
 
   .btn-ivory {
-    @apply inline-flex items-center justify-center gap-3 border border-ivory/40 bg-ivory/10 px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-ivory backdrop-blur-sm transition-all duration-300 hover:border-ivory hover:bg-ivory hover:text-charcoal;
+    @apply inline-flex min-h-11 items-center justify-center gap-3 border border-ivory/40 bg-ivory/10 px-5 py-3 font-sans text-[0.72rem] uppercase tracking-[0.16em] text-ivory backdrop-blur-sm transition-all duration-300 hover:border-ivory hover:bg-ivory hover:text-charcoal md:min-h-0 md:px-7 md:py-3.5 md:text-[0.65rem] md:tracking-[0.28em];
   }
 
   .label-caps {
-    @apply font-sans text-[0.6rem] uppercase tracking-[0.25em] text-taupe;
+    @apply font-sans text-[0.7rem] uppercase tracking-[0.16em] text-taupe md:text-[0.6rem] md:tracking-[0.25em];
   }
 
   .input-line {

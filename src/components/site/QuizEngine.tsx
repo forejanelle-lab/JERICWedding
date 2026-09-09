@@ -52,7 +52,7 @@ export function QuizEngine({
 
   if (phase === "intro") {
     return (
-      <div className="soft-card mx-auto max-w-2xl p-8 md:p-12">
+      <div className="soft-card mx-auto max-w-2xl p-5 md:p-12">
         {editId ? (
           <EditText id={`${editId}.eyebrow`} as="p" className="label-caps text-olive">
             {eyebrow}
@@ -88,7 +88,7 @@ export function QuizEngine({
 
   if (phase === "done" || !question) {
     return (
-      <div className="soft-card mx-auto max-w-2xl p-8 text-center md:p-12">
+      <div className="soft-card mx-auto max-w-2xl p-5 text-center md:p-12">
         <p className="label-caps">{t("quiz.yourScore")}</p>
         <p className="mt-4 font-serif text-6xl font-light text-charcoal">{score}/{questions.length}</p>
         <p className="mt-4 font-sans text-charcoal/70">
@@ -99,7 +99,7 @@ export function QuizEngine({
   }
 
   return (
-    <div className="soft-card mx-auto max-w-2xl p-8 md:p-12">
+    <div className="soft-card mx-auto max-w-2xl p-5 md:p-12">
       <p className="label-caps">
         {t("quiz.of", { n: index + 1, total: questions.length })}
       </p>
@@ -117,7 +117,7 @@ export function QuizEngine({
           const optKey = editId ? `${editId}.q.${question.id}.opt.${optionIndex}` : "";
           const isCorrect = optionIndex === question.correctIndex;
           const isPick = optionIndex === selected;
-          let classes = "w-full rounded-2xl border border-taupe/20 px-5 py-4 text-left font-sans text-sm transition-colors";
+          let classes = "w-full min-h-12 rounded-2xl border border-taupe/20 px-4 py-3.5 text-left font-sans text-base leading-snug transition-colors md:px-5 md:py-4 md:text-sm";
           if (revealed && isCorrect) classes += " border-olive bg-sage/15 text-forest";
           else if (revealed && isPick) classes += " border-taupe/40 bg-beige/40 text-charcoal/60";
           else classes += " hover:border-charcoal/30";

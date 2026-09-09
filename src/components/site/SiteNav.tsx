@@ -39,9 +39,9 @@ export function SiteNav() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#E6E0D7]/80 bg-[#F9F7F2]/95 text-[#242424] backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1400px] items-center px-5 py-3.5 lg:px-10">
-          <Link href="/" className="shrink-0 font-sans text-[0.72rem] uppercase tracking-[0.28em] text-[#242424]">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#E6E0D7]/80 bg-[#F9F7F2]/95 pt-[env(safe-area-inset-top)] text-[#242424] backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-4 py-3 md:px-5 lg:px-10">
+          <Link href="/" className="shrink-0 font-sans text-[0.8rem] uppercase tracking-[0.2em] text-[#242424] md:text-[0.72rem] md:tracking-[0.28em]">
             J & E
           </Link>
 
@@ -109,7 +109,7 @@ export function SiteNav() {
 
           <button
             type="button"
-            className="relative z-50 ml-2 flex h-9 w-9 flex-col items-center justify-center gap-1.5 lg:hidden"
+            className="relative z-50 ml-1 flex h-11 w-11 flex-col items-center justify-center gap-1.5 lg:hidden"
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
             aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
@@ -126,36 +126,36 @@ export function SiteNav() {
           menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        <nav className="flex flex-col items-end px-6 pt-20 pb-10 text-right" aria-label={t("nav.mobile")}>
+        <nav className="flex flex-col px-6 pt-[calc(5.5rem+env(safe-area-inset-top))] pb-[calc(7rem+env(safe-area-inset-bottom))]" aria-label={t("nav.mobile")}>
           {primary.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`py-2 font-sans text-[0.8rem] uppercase tracking-[0.18em] text-[#242424] ${
+              className={`min-h-12 border-b border-[#E6E0D7]/70 py-3 font-sans text-base uppercase tracking-[0.14em] text-[#242424] ${
                 state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
               }`}
             >
               {t(NAV_I18N[item.href] ?? item.label)}
             </Link>
           ))}
-          <span className="mt-5 mb-1 font-sans text-[0.52rem] uppercase tracking-[0.22em] text-[#77736C]">{t("nav.more")}</span>
+          <span className="mt-6 mb-1 font-sans text-[0.68rem] uppercase tracking-[0.18em] text-[#77736C]">{t("nav.more")}</span>
           {more.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`py-2 font-sans text-[0.8rem] uppercase tracking-[0.18em] text-[#242424] ${
+              className={`min-h-12 border-b border-[#E6E0D7]/70 py-3 font-sans text-base uppercase tracking-[0.14em] text-[#242424] ${
                 state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
               }`}
             >
               {t(NAV_I18N[item.href] ?? item.label)}
             </Link>
           ))}
-          <Link href={identity ? "/me" : "/join"} className="mt-5 py-2 font-sans text-[0.8rem] uppercase tracking-[0.18em] text-[#2D3B2D]">
+          <Link href={identity ? "/me" : "/join"} className="mt-6 min-h-12 py-3 font-sans text-base uppercase tracking-[0.14em] text-[#2D3B2D]">
             {identity ? t("nav.myWeekend") : t("nav.join")}
           </Link>
           <button
             type="button"
-            className="py-2 font-sans text-[0.8rem] uppercase tracking-[0.18em] text-[#77736C]"
+            className="min-h-12 py-3 text-left font-sans text-base uppercase tracking-[0.14em] text-[#77736C]"
             onClick={() => void signOut()}
           >
             {t("nav.signOut")}
@@ -173,7 +173,7 @@ export function MobileTabBar() {
   const tabs = MOBILE_TABS.filter((tab) => canSeePage(state, tab.href));
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E6E0D7] bg-[#F9F7F2]/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E6E0D7] bg-[#F9F7F2]/95 px-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md md:hidden"
       aria-label={t("nav.quick")}
     >
       <ul
@@ -186,7 +186,7 @@ export function MobileTabBar() {
             <li key={tab.href}>
               <Link
                 href={tab.href}
-                className={`flex flex-col items-center gap-0.5 py-1 font-sans text-[0.52rem] uppercase tracking-[0.12em] ${
+                className={`flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 py-1 font-sans text-[0.62rem] uppercase tracking-[0.08em] ${
                   active ? "text-[#2D3B2D]" : "text-[#77736C]"
                 }`}
               >

@@ -22,10 +22,10 @@ export default function RidesPage() {
   const rides = state.rides.filter((ride) => (kind === "all" ? true : ride.kind === kind));
 
   return (
-    <main className="px-5 pt-20 pb-24 md:px-10 md:pt-[4.5rem] md:pb-12 lg:px-12">
+    <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-10 md:pt-[4.5rem] md:pb-12 lg:px-12">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <EditText id="rides.title" as="h1" className="font-serif text-3xl font-light tracking-[0.08em] uppercase md:text-4xl">
+          <EditText id="rides.title" as="h1" className="font-serif text-[1.85rem] font-light leading-tight tracking-[0.06em] uppercase md:text-4xl md:tracking-[0.08em]">
             Need a Ride?
           </EditText>
           <EditText id="rides.intro" as="p" className="mt-1 font-sans text-sm text-charcoal/60">
@@ -34,8 +34,8 @@ export default function RidesPage() {
         </div>
       </div>
 
-      <div className="flex flex-row items-start gap-5 md:gap-8">
-        <aside className="w-[42%] max-w-[22rem] shrink-0 sm:sticky sm:top-20">
+      <div className="flex flex-col items-stretch gap-8 md:flex-row md:items-start md:gap-8">
+        <aside className="w-full shrink-0 md:sticky md:top-20 md:w-[42%] md:max-w-[22rem]">
           {identity || (state.adminAuthed && editingId) ? (
             <form
               key={editingId ?? "new"}
@@ -149,7 +149,7 @@ export default function RidesPage() {
               { id: "request", label: t("rides.needARide") },
             ]}
           />
-          <div className="mt-4 max-h-[calc(100svh-10rem)] space-y-3 overflow-y-auto pr-1">
+          <div className="mt-4 space-y-3 md:max-h-[calc(100svh-10rem)] md:overflow-y-auto md:pr-1">
             {rides.length === 0 ? (
               <p className="font-sans text-sm text-charcoal/55">{t("rides.noPostings")}</p>
             ) : (

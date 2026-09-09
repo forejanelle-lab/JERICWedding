@@ -21,7 +21,7 @@ export function Footer() {
   const { state } = useHub();
   const links = FOOTER_LINKS.filter((item) => canSeePage(state, item.href));
   return (
-    <footer className="border-t border-taupe/10 bg-ivory px-6 pb-28 pt-16 text-center md:px-10 md:pb-20 md:pt-24">
+    <footer className="border-t border-taupe/10 bg-ivory px-5 pb-8 pt-12 text-center md:px-10 md:pb-20 md:pt-24">
       <EditText id="footer.couple" as="p" className="font-serif text-3xl font-light tracking-[0.12em] text-charcoal uppercase md:text-4xl">
         {WEDDING.couple}
       </EditText>
@@ -33,7 +33,7 @@ export function Footer() {
           {WEDDING.location}
         </EditText>
       </div>
-      <nav className="mx-auto mt-10 flex max-w-lg flex-wrap justify-center gap-x-6 gap-y-3 font-sans text-[0.6rem] uppercase tracking-[0.2em] text-taupe">
+      <nav className="mx-auto mt-10 flex max-w-lg flex-wrap justify-center gap-x-5 gap-y-3 font-sans text-[0.72rem] uppercase tracking-[0.14em] text-taupe md:text-[0.6rem] md:tracking-[0.2em]">
         {links.map((item) => (
           <Link key={item.href} href={item.href} className="hover:text-charcoal">
             {t(item.key)}

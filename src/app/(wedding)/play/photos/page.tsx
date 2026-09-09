@@ -21,7 +21,7 @@ export default function PhotoGamePage() {
 
   if (state.adminAuthed && state.siteEditing) {
     return (
-      <main className="px-5 py-28">
+      <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
         <div className="mx-auto max-w-2xl">
           <p className="label-caps text-olive">{t("quiz.editGame")}</p>
           <h1 className="mt-2 font-serif text-3xl uppercase">Guess the photo</h1>
@@ -40,7 +40,7 @@ export default function PhotoGamePage() {
 
   if (done || !question) {
     return (
-      <main className="px-5 py-28">
+      <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
         <div className="soft-card mx-auto max-w-xl p-10 text-center">
           <p className="label-caps">{t("play.photos.title")}</p>
           <p className="mt-4 font-serif text-6xl">{score}/{questions.length}</p>
@@ -56,7 +56,7 @@ export default function PhotoGamePage() {
   }
 
   return (
-    <main className="px-5 py-28">
+    <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
       <div className="mx-auto max-w-xl">
         <p className="label-caps text-olive">
           {t("play.photos.kicker", { n: index + 1, total: questions.length })}

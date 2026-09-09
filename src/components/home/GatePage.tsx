@@ -136,7 +136,7 @@ export function GatePage({
   const passcodeInvalid = formState.field === "passcode" && !passcodeEdited;
 
   return (
-    <main className="relative flex min-h-[100svh] items-center justify-center overflow-hidden">
+    <main className="relative flex min-h-[100svh] items-start justify-center overflow-y-auto overflow-x-hidden sm:items-center">
       <EditImage
         id="gate.background"
         src="/images/casale-bosco.jpg"
@@ -149,26 +149,26 @@ export function GatePage({
       <div className="absolute inset-0 bg-[#2D3B2D]/45" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#242424]/80 via-[#242424]/25 to-[#242424]/40" />
 
-      <div className="relative z-10 flex w-full max-w-lg flex-col items-center px-5 py-16 text-center text-[#F9F7F2]">
+      <div className="relative z-10 flex w-full max-w-lg flex-col items-center px-4 py-10 text-center text-[#F9F7F2] sm:px-5 sm:py-16">
         <EditText id="gate.script" as="p" className="font-hand text-2xl text-[#F9F7F2]/85 md:text-3xl">
           We&apos;re getting married
         </EditText>
-        <EditText id="gate.name1" as="h1" className="mt-3 font-serif text-5xl font-light tracking-[0.08em] uppercase md:text-7xl">
+        <EditText id="gate.name1" as="h1" className="mt-3 font-serif text-[2.6rem] font-light leading-none tracking-[0.04em] uppercase sm:text-5xl md:text-7xl md:tracking-[0.08em]">
           Janelle
         </EditText>
         <span className="my-1 font-hand text-3xl italic text-[#F9F7F2]/90 md:text-4xl">&</span>
-        <EditText id="gate.name2" as="h1" className="font-serif text-5xl font-light tracking-[0.08em] uppercase md:text-7xl">
+        <EditText id="gate.name2" as="h1" className="font-serif text-[2.6rem] font-light leading-none tracking-[0.04em] uppercase sm:text-5xl md:text-7xl md:tracking-[0.08em]">
           Eric
         </EditText>
-        <EditText id="gate.dates" as="p" className="mt-5 font-sans text-[0.62rem] uppercase tracking-[0.28em] text-[#F9F7F2]/85">
+        <EditText id="gate.dates" as="p" className="mt-5 font-sans text-[0.72rem] uppercase tracking-[0.16em] text-[#F9F7F2]/85 md:text-[0.62rem] md:tracking-[0.28em]">
           September 4–6, 2027
         </EditText>
         <div className="my-3 h-px w-10 bg-[#F9F7F2]/40" />
-        <EditText id="gate.venue" as="p" className="font-sans text-[0.62rem] uppercase tracking-[0.28em] text-[#F9F7F2]/80">
+        <EditText id="gate.venue" as="p" className="max-w-[16rem] font-sans text-[0.72rem] uppercase leading-relaxed tracking-[0.14em] text-[#F9F7F2]/80 md:max-w-none md:text-[0.62rem] md:tracking-[0.28em]">
           Casale dei Mascioni · Campania, Italy
         </EditText>
 
-        <div className="mt-10 w-full rounded-[20px] border border-[#E6E0D7]/80 bg-[#F9F7F2]/95 p-6 text-left text-[#242424] shadow-[0_16px_40px_rgba(0,0,0,0.18)] md:p-8">
+        <div className="mt-8 w-full rounded-[20px] border border-[#E6E0D7]/80 bg-[#F9F7F2]/95 p-5 text-left text-[#242424] shadow-[0_16px_40px_rgba(0,0,0,0.18)] md:mt-10 md:p-8">
           <form action={formAction}>
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="firstName" value={firstName} />
@@ -176,12 +176,12 @@ export function GatePage({
             <input type="hidden" name="location" value={selected?.location ?? invite?.location ?? ""} />
             <input type="hidden" name="inviteId" value={selected?.inviteId ?? ""} />
             <input type="hidden" name="fromList" value={selected ? "1" : "0"} />
-            <p className="mb-5 font-sans text-[0.58rem] uppercase tracking-[0.2em] text-[#77736C]">
+            <p className="mb-5 font-sans text-[0.7rem] uppercase tracking-[0.16em] text-[#77736C] md:text-[0.58rem] md:tracking-[0.2em]">
               {t("gate.enterWeekend")}
             </p>
             <div className="space-y-5">
               <label className="block">
-                <span className="font-sans text-[0.58rem] uppercase tracking-[0.2em] text-[#77736C]">
+                <span className="font-sans text-[0.7rem] uppercase tracking-[0.16em] text-[#77736C] md:text-[0.58rem] md:tracking-[0.2em]">
                   {t("gate.passcode")}
                 </span>
                 <input
@@ -202,7 +202,7 @@ export function GatePage({
               </label>
               <div ref={boxRef} className="relative">
                 <label className="block">
-                  <span className="font-sans text-[0.58rem] uppercase tracking-[0.2em] text-[#77736C]">
+                  <span className="font-sans text-[0.7rem] uppercase tracking-[0.16em] text-[#77736C] md:text-[0.58rem] md:tracking-[0.2em]">
                     {t("gate.name")}
                   </span>
                   <input
@@ -278,7 +278,7 @@ export function GatePage({
                 ) : null}
               </div>
               <label className="block">
-                <span className="font-sans text-[0.58rem] uppercase tracking-[0.2em] text-[#77736C]">
+                <span className="font-sans text-[0.7rem] uppercase tracking-[0.16em] text-[#77736C] md:text-[0.58rem] md:tracking-[0.2em]">
                   {t("gate.email")}
                 </span>
                 <input
@@ -307,7 +307,7 @@ export function GatePage({
             <button
               type="submit"
               disabled={pending}
-              className="mt-7 w-full rounded-full bg-[#2D3B2D] px-6 py-3.5 font-sans text-[0.62rem] uppercase tracking-[0.2em] text-[#F9F7F2] transition-colors duration-200 hover:bg-[#3d4f3d] disabled:opacity-60"
+              className="mt-7 min-h-12 w-full rounded-full bg-[#2D3B2D] px-6 py-3.5 font-sans text-[0.72rem] uppercase tracking-[0.16em] text-[#F9F7F2] transition-colors duration-200 hover:bg-[#3d4f3d] disabled:opacity-60 md:text-[0.62rem] md:tracking-[0.2em]"
             >
               {pending ? t("gate.entering") : t("gate.enter")}
             </button>

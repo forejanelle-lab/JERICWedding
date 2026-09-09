@@ -28,7 +28,7 @@ export function FaqAccordion() {
                     onClick={() => setOpenIndex(isOpen ? null : index)}
                     aria-expanded={isOpen}
                   >
-                    <span className="font-sans text-[0.7rem] uppercase tracking-[0.2em] text-charcoal md:text-xs">
+                    <span className="font-sans text-[0.85rem] leading-snug text-charcoal md:text-[0.7rem] md:uppercase md:tracking-[0.2em]">
                       {item.question}
                     </span>
                     <span

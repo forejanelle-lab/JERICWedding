@@ -13,7 +13,7 @@ export function LanguageSelect({ tone = "dark" }: { tone?: "dark" | "light" }) {
         value={locale}
         onChange={(event) => setLocale(event.target.value as typeof locale)}
         aria-label={t("ui.language")}
-        className={`cursor-pointer appearance-none rounded-full border bg-transparent py-1 pl-3 pr-7 font-sans text-[0.58rem] uppercase tracking-[0.16em] outline-none ${
+        className={`min-h-11 cursor-pointer appearance-none rounded-full border bg-transparent py-2 pl-3.5 pr-8 font-sans text-[0.7rem] uppercase tracking-[0.12em] outline-none md:py-1 md:pl-3 md:pr-7 md:text-[0.58rem] md:tracking-[0.16em] ${
           light
             ? "border-[#F9F7F2]/35 text-[#F9F7F2] [color-scheme:dark]"
             : "border-[#242424]/20 text-[#242424]"

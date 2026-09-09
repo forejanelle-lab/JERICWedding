@@ -28,10 +28,10 @@ export function EventPopup({ event, onClose }: { event: WeekendEvent; onClose: (
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center p-4 sm:items-center">
       <button type="button" className="absolute inset-0 bg-[#242424]/50" aria-label={t("ui.close")} onClick={onClose} />
-      <article className="relative z-[1] max-h-[90svh] w-full max-w-lg overflow-y-auto rounded-[24px] bg-ivory p-6 shadow-[0_24px_60px_rgba(36,36,36,0.25)] md:p-8">
+      <article className="relative z-[1] mb-[env(safe-area-inset-bottom)] max-h-[88svh] w-full max-w-lg overflow-y-auto rounded-t-[24px] bg-ivory p-5 shadow-[0_24px_60px_rgba(36,36,36,0.25)] sm:mb-0 sm:rounded-[24px] md:p-8">
         <button
           type="button"
-          className="absolute right-4 top-4 font-sans text-[0.55rem] uppercase tracking-[0.16em] text-taupe"
+          className="absolute right-3 top-3 min-h-11 min-w-11 font-sans text-sm uppercase tracking-[0.12em] text-taupe md:right-4 md:top-4 md:text-[0.55rem] md:tracking-[0.16em]"
           onClick={onClose}
         >
           {t("ui.close")}

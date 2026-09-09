@@ -57,14 +57,14 @@ export function Lightbox({
     >
       <button
         type="button"
-        className="absolute right-5 top-5 font-sans text-[0.65rem] uppercase tracking-[0.25em] text-ivory/70"
+        className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] min-h-11 px-3 font-sans text-sm uppercase tracking-[0.16em] text-ivory md:right-5 md:top-5 md:text-[0.65rem] md:tracking-[0.25em]"
         onClick={onClose}
       >
         {t("ui.close")}
       </button>
       <button
         type="button"
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-ivory/80"
+        className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center text-4xl text-ivory/90 md:left-4"
         onClick={(event) => {
           event.stopPropagation();
           onPrev();
@@ -87,7 +87,7 @@ export function Lightbox({
       </figure>
       <button
         type="button"
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-ivory/80"
+        className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center text-4xl text-ivory/90 md:right-4"
         onClick={(event) => {
           event.stopPropagation();
           onNext();
@@ -110,13 +110,13 @@ export function FilterPills<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {options.map((option) => (
         <button
           key={option.id}
           type="button"
           onClick={() => onChange(option.id)}
-          className={`rounded-full border px-4 py-2 font-sans text-[0.6rem] uppercase tracking-[0.18em] transition-colors ${
+          className={`shrink-0 rounded-full border px-4 py-2.5 font-sans text-[0.7rem] uppercase tracking-[0.12em] transition-colors md:text-[0.6rem] md:tracking-[0.18em] ${
             value === option.id
               ? "border-forest bg-forest text-ivory"
               : "border-taupe/25 text-charcoal/70 hover:border-charcoal/40"

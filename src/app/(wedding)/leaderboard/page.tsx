@@ -34,7 +34,7 @@ export default function LeaderboardPage() {
     .slice(0, 20);
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <PageHeader
           editId="leaderboard"

@@ -9,7 +9,7 @@ export default function FaqPage() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <main className="pt-24 md:pt-28">
+    <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
       <SectionWrap className="bg-ivory">
         <PageHeader editId="faq" eyebrow="Practicalities" title="FAQ" />
         <div className="mx-auto mt-12 max-w-3xl divide-y divide-taupe/20">
@@ -23,7 +23,7 @@ export default function FaqPage() {
                   onClick={() => setOpen(isOpen ? null : index)}
                   aria-expanded={isOpen}
                 >
-                  <EditText id={`faq.${index}.question`} as="span" className="font-sans text-[0.7rem] uppercase tracking-[0.2em] text-charcoal">
+                  <EditText id={`faq.${index}.question`} as="span" className="font-sans text-sm leading-snug tracking-normal text-charcoal md:text-[0.8rem] md:uppercase md:tracking-[0.16em]">
                     {item.question}
                   </EditText>
                   <span className={`text-taupe ${isOpen ? "rotate-45" : ""}`}>+</span>
