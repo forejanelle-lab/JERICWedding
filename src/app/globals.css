@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ivory: #f9f7f2;
+  --cream: #f5f1e9;
+  --beige: #e6e0d7;
+  --taupe: #77736c;
+  --sage: #8a9a7b;
+  --olive: #5c6350;
+  --forest: #2d3b2d;
+  --charcoal: #242424;
+  --gold: #b8a067;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ivory: var(--ivory);
+  --color-cream: var(--cream);
+  --color-beige: var(--beige);
+  --color-taupe: var(--taupe);
+  --color-sage: var(--sage);
+  --color-olive: var(--olive);
+  --color-forest: var(--forest);
+  --color-charcoal: var(--charcoal);
+  --color-gold: var(--gold);
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-jost);
+  --font-script: var(--font-cormorant);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.font-hand {
+  font-family: var(--font-hand), cursive;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ivory);
+  color: var(--charcoal);
+  font-family: var(--font-jost), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(184, 160, 103, 0.25);
+  color: var(--charcoal);
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-3 border border-charcoal bg-charcoal px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-ivory transition-all duration-300 hover:bg-transparent hover:text-charcoal;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-3 border border-charcoal/20 bg-transparent px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-charcoal transition-all duration-300 hover:border-charcoal;
+  }
+
+  .btn-ivory {
+    @apply inline-flex items-center justify-center gap-3 border border-ivory/40 bg-ivory/10 px-7 py-3.5 font-sans text-[0.65rem] uppercase tracking-[0.28em] text-ivory backdrop-blur-sm transition-all duration-300 hover:border-ivory hover:bg-ivory hover:text-charcoal;
+  }
+
+  .label-caps {
+    @apply font-sans text-[0.6rem] uppercase tracking-[0.25em] text-taupe;
+  }
+
+  .input-line {
+    @apply w-full rounded-none border-0 border-b border-taupe/30 bg-transparent px-0 py-3 font-sans text-base text-charcoal placeholder:text-taupe/50 focus:border-charcoal focus:outline-none;
+  }
+
+  .soft-card {
+    @apply rounded-2xl border border-taupe/15 bg-ivory shadow-[0_8px_30px_rgba(47,58,46,0.04)] transition-all duration-500;
+  }
+
+  .card-lift {
+    @apply transition-all duration-500;
+  }
+
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(47, 58, 46, 0.08);
+  }
+}
+
+@keyframes pulse-number {
+  from {
+    opacity: 0.45;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tick-in {
+  animation: pulse-number 0.35s ease-out;
+}
+
+@keyframes heart-float {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(1.2);
+  }
+}
+
+.heart-pop {
+  animation: heart-float 0.7s ease-out;
+}
+
+.photo-arch {
+  border-radius: 50% 50% 1.4rem 1.4rem / 16% 16% 1.4rem 1.4rem;
+}
+
+.photo-ken {
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+a:hover .photo-ken,
+button:hover .photo-ken {
+  transform: scale(1.06);
 }

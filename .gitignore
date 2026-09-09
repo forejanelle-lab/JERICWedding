@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local ride digest queue
+.data/
+
+# supabase CLI
+supabase/.temp/
+
 # vercel
 .vercel
 
