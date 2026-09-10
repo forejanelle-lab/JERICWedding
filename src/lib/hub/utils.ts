@@ -116,7 +116,7 @@ function loadHtmlImage(src: string) {
 
 export async function readImageAsCompressedDataUrl(file: File): Promise<string> {
   if (!file.size) throw new Error("empty");
-  if (file.type && !file.type.startsWith("image/")) throw new Error("not-image");
+  if (file.type && !file.type.startsWith("image/") && file.type !== "") throw new Error("not-image");
 
   try {
     if (typeof createImageBitmap === "function") {
@@ -133,9 +133,13 @@ export async function readImageAsCompressedDataUrl(file: File): Promise<string> 
   }
 
   const dataUrl = await readFileAsDataUrl(file);
-  const image = await loadHtmlImage(dataUrl);
-  const size = fitSize(image.naturalWidth || image.width, image.naturalHeight || image.height, MAX_PHOTO_EDGE);
-  return canvasToJpeg(image, size.width, size.height);
+  try {
+    const image = await loadHtmlImage(dataUrl);
+    const size = fitSize(image.naturalWidth || image.width, image.naturalHeight || image.height, MAX_PHOTO_EDGE);
+    return canvasToJpeg(image, size.width, size.height);
+  } catch {
+    return dataUrl;
+  }
 }
 
 export function parseInviteCsv(text: string): InviteRecord[] {

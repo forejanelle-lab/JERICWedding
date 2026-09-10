@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
-import { hasAdminCookie } from "@/lib/gate/auth";
+import { isCoupleAdmin } from "@/lib/hub/content";
+import { getGateSession, hasAdminCookie } from "@/lib/gate/auth";
+import { personIsSiteEditor } from "@/lib/editors/store";
 import { loadSiteContent, replaceSiteContent, resetSiteContent } from "@/lib/site-content/store";
 import type { SiteContent } from "@/lib/site-content/types";
+
+async function canPublishSite() {
+  if (await hasAdminCookie()) return true;
+  const session = await getGateSession();
+  if (!session) return false;
+  if (isCoupleAdmin(session.firstName, session.email)) return true;
+  return personIsSiteEditor({
+    email: session.email,
+    firstName: session.firstName,
+    lastName: session.lastName,
+  });
+}
 
 export async function GET() {
   const content = await loadSiteContent();
@@ -9,7 +23,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await hasAdminCookie())) {
+  if (!(await canPublishSite())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const body = (await request.json()) as Partial<SiteContent>;
