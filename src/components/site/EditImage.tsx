@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
-import { readFileAsDataUrl } from "@/lib/hub/utils";
+import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
 
 export function EditImage({
   id,
@@ -35,12 +35,14 @@ export function EditImage({
   const picture = data ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      key={resolved.slice(0, 80)}
       src={resolved}
       alt={alt}
       className={fill ? `absolute inset-0 h-full w-full object-cover ${className}` : className}
     />
   ) : (
     <Image
+      key={resolved}
       src={resolved}
       alt={alt}
       fill={fill}
@@ -109,7 +111,7 @@ export function EditImage({
         onChange={async (event) => {
           const file = event.target.files?.[0];
           if (!file) return;
-          const url = await readFileAsDataUrl(file);
+          const url = await readImageAsCompressedDataUrl(file);
           updateSiteImage(id, url);
           event.target.value = "";
         }}

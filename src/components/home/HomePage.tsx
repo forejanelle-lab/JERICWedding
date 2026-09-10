@@ -64,8 +64,8 @@ export function HomePage({ guestFirstName = "" }: { guestFirstName?: string }) {
       <div className="mx-auto max-w-[1320px] px-5 md:px-8 lg:px-12">
         <section className="grid items-end gap-4 py-8 md:grid-cols-2 md:gap-12 md:py-10">
           <div>
-            <div className="font-hand text-2xl text-[#2D3B2D] md:text-3xl">
-              <EditText id="home.helloName" as="span" className="font-hand text-2xl text-[#2D3B2D] md:text-3xl">
+            <div className="font-hand text-[2.15rem] leading-[1.15] text-[#2D3B2D] md:text-5xl">
+              <EditText id="home.helloName" as="span" className="font-hand text-[2.15rem] leading-[1.15] text-[#2D3B2D] md:text-5xl">
                 Benvenuti
               </EditText>
               {firstName ? (
@@ -76,7 +76,7 @@ export function HomePage({ guestFirstName = "" }: { guestFirstName?: string }) {
               ) : null}
               !
             </div>
-            <EditText id="home.title" as="h1" className="mt-1 font-serif text-[2.15rem] font-light leading-tight tracking-[0.04em] text-[#242424] uppercase md:text-5xl md:tracking-[0.06em]">
+            <EditText id="home.title" as="h1" className="mt-2 font-serif text-xl font-light leading-tight tracking-[0.08em] text-[#242424] uppercase md:text-3xl md:tracking-[0.12em]">
               The Weekend
             </EditText>
             <EditText id="home.dates" as="p" className="mt-2 max-w-[16rem] font-sans text-[0.72rem] uppercase leading-relaxed tracking-[0.12em] text-[#77736C] md:max-w-none md:text-[0.62rem] md:tracking-[0.2em]">
@@ -91,21 +91,21 @@ export function HomePage({ guestFirstName = "" }: { guestFirstName?: string }) {
           </div>
         </section>
 
-        <section className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${actions.length >= 4 ? "lg:grid-cols-4" : actions.length === 3 ? "lg:grid-cols-3" : ""} lg:gap-6`}>
+        <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${actions.length >= 4 ? "lg:grid-cols-4" : actions.length === 3 ? "lg:grid-cols-3" : ""} lg:gap-4`}>
           {actions.map((card) => (
             <Link
               key={card.href}
               href={card.href}
-              className="group flex min-h-[176px] flex-col rounded-[20px] border border-[#E6E0D7] bg-[#F5F1E9] px-6 py-6 transition duration-200 hover:-translate-y-0.5 hover:border-[#2D3B2D]/25 md:min-h-[196px] md:px-7 md:py-7"
+              className="group flex min-h-[118px] flex-col rounded-2xl border border-[#E6E0D7] bg-[#F5F1E9] px-4 py-4 transition duration-200 hover:-translate-y-0.5 hover:border-[#2D3B2D]/25 md:min-h-[128px] md:px-5 md:py-5"
             >
               <ActionIcon name={card.icon} />
-              <EditText id={`home.card.${card.href}.title`} as="h2" className="mt-4 font-serif text-2xl font-light leading-tight tracking-[0.02em] text-[#242424]">
+              <EditText id={`home.card.${card.href}.title`} as="h2" className="mt-3 font-serif text-lg font-light leading-tight tracking-[0.02em] text-[#242424] md:text-xl">
                 {card.title}
               </EditText>
-              <EditText id={`home.card.${card.href}.body`} as="p" className="mt-2 font-sans text-sm leading-snug text-[#77736C]">
+              <EditText id={`home.card.${card.href}.body`} as="p" className="mt-1 font-sans text-xs leading-snug text-[#77736C]">
                 {card.body}
               </EditText>
-              <span className="mt-4 font-serif text-xl text-[#242424] transition-transform duration-200 group-hover:translate-x-1">
+              <span className="mt-3 font-serif text-base text-[#242424] transition-transform duration-200 group-hover:translate-x-1">
                 →
               </span>
             </Link>
@@ -259,7 +259,7 @@ export function HomePage({ guestFirstName = "" }: { guestFirstName?: string }) {
 }
 
 function ActionIcon({ name }: { name: string }) {
-  const className = "h-7 w-7 text-[#2D3B2D]";
+  const className = "h-5 w-5 text-[#2D3B2D]";
   if (name === "glasses") {
     return (
       <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">

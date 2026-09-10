@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { HIDEABLE_PAGES } from "@/lib/hub/content";
 import { useHub } from "@/lib/hub/store";
-import { readFileAsDataUrl } from "@/lib/hub/utils";
+import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
 import type { PhotoQuestion, PredictionQuestion, QuizQuestion } from "@/lib/hub/types";
 
 function uid() {
@@ -175,7 +175,7 @@ function PhotoEditor({
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
-                  const image = await readFileAsDataUrl(file);
+                  const image = await readImageAsCompressedDataUrl(file);
                   onChange(questions.map((item) => (item.id === question.id ? { ...item, image } : item)));
                   event.target.value = "";
                 }}

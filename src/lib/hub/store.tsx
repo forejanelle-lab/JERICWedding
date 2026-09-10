@@ -42,6 +42,8 @@ import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/ad
 import { checkSiteEditor, syncSiteEditors } from "@/lib/editors/client";
 import type { SiteEditor } from "@/lib/editors/match";
 import { fetchSharedInvites, syncSharedInvites } from "@/lib/invites/client";
+import { fetchSiteContent, syncSiteContent } from "@/lib/site-content/client";
+import type { SiteContent } from "@/lib/site-content/types";
 import { collectHubEmails } from "@/lib/rides/emails";
 import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 
@@ -52,14 +54,11 @@ function persistHubState(state: HubState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    const dataPhotos = state.photos.filter((photo) => photo.src.startsWith("data:"));
-    const otherPhotos = state.photos.filter((photo) => !photo.src.startsWith("data:"));
     const trimmed: HubState = {
       ...state,
-      photos: [...dataPhotos.slice(0, 16), ...otherPhotos],
-      siteImages: Object.fromEntries(
-        Object.entries(state.siteImages).filter(([, src]) => !src.startsWith("data:")),
-      ),
+      photos: state.photos.filter((photo) => !photo.src.startsWith("data:")).slice(0, 8),
+      guestbook: state.guestbook.map((note) => ({ ...note, photoDataUrl: undefined })),
+      identity: state.identity ? { ...state.identity, photoDataUrl: undefined } : null,
     };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
@@ -127,6 +126,16 @@ function mergeInviteLists(local: InviteRecord[], remote: InviteRecord[]) {
     byId.set(invite.id, invite);
   }
   return [...byId.values()];
+}
+
+function contentFromState(state: HubState): SiteContent {
+  return {
+    siteCopy: state.siteCopy,
+    siteImages: state.siteImages,
+    siteHidden: state.siteHidden,
+    hiddenPages: state.hiddenPages ?? [],
+    heroImage: state.heroImage,
+  };
 }
 
 function editorsFromInvites(invites: InviteRecord[]): SiteEditor[] {
@@ -347,6 +356,26 @@ export function HubProvider({
         }
         return { ...prev, invites };
       });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    void fetchSiteContent().then((remote) => {
+      if (cancelled || !remote) return;
+      setState((prev) => ({
+        ...prev,
+        siteCopy: { ...remote.siteCopy, ...prev.siteCopy },
+        siteImages: { ...remote.siteImages, ...prev.siteImages },
+        siteHidden: [...new Set([...(remote.siteHidden ?? []), ...(prev.siteHidden ?? [])])],
+        hiddenPages: [...new Set([...(remote.hiddenPages ?? []), ...(prev.hiddenPages ?? [])])],
+        heroImage:
+          prev.heroImage && prev.heroImage !== DEFAULT_HERO ? prev.heroImage : remote.heroImage || prev.heroImage,
+      }));
     });
     return () => {
       cancelled = true;
@@ -907,7 +936,11 @@ export function HubProvider({
   );
 
   const setHeroImage = useCallback((src: string) => {
-    setState((prev) => ({ ...prev, heroImage: src }));
+    setState((prev) => {
+      const next = { ...prev, heroImage: src };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const moderateSong = useCallback((id: string, approved: boolean) => {
@@ -1066,7 +1099,10 @@ export function HubProvider({
   }, []);
 
   const setSiteEditing = useCallback((on: boolean) => {
-    setState((prev) => ({ ...prev, siteEditing: on }));
+    setState((prev) => {
+      if (!on) void syncSiteContent(contentFromState(prev));
+      return { ...prev, siteEditing: on };
+    });
   }, []);
 
   const setGameQuestions = useCallback((gameId: string, questions: QuizQuestion[]) => {
@@ -1135,40 +1171,60 @@ export function HubProvider({
   }, []);
 
   const updateSiteCopy = useCallback((id: string, value: string) => {
-    setState((prev) => ({ ...prev, siteCopy: { ...prev.siteCopy, [id]: value } }));
+    setState((prev) => {
+      const next = { ...prev, siteCopy: { ...prev.siteCopy, [id]: value } };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const updateSiteImage = useCallback((id: string, src: string) => {
-    setState((prev) => ({
-      ...prev,
-      siteImages: { ...prev.siteImages, [id]: src },
-      siteHidden: prev.siteHidden.filter((item) => item !== id),
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        siteImages: { ...prev.siteImages, [id]: src },
+        siteHidden: prev.siteHidden.filter((item) => item !== id),
+      };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const hideSiteItem = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      siteHidden: prev.siteHidden.includes(id) ? prev.siteHidden : [...prev.siteHidden, id],
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        siteHidden: prev.siteHidden.includes(id) ? prev.siteHidden : [...prev.siteHidden, id],
+      };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const showSiteItem = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      siteHidden: prev.siteHidden.filter((item) => item !== id),
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        siteHidden: prev.siteHidden.filter((item) => item !== id),
+      };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const togglePageHidden = useCallback((href: string) => {
     if (!canTogglePageHidden(href)) return;
     const key = pageKey(href);
-    setState((prev) => ({
-      ...prev,
-      hiddenPages: (prev.hiddenPages ?? []).includes(key)
-        ? prev.hiddenPages.filter((item) => item !== key)
-        : [...(prev.hiddenPages ?? []), key],
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        hiddenPages: (prev.hiddenPages ?? []).includes(key)
+          ? prev.hiddenPages.filter((item) => item !== key)
+          : [...(prev.hiddenPages ?? []), key],
+      };
+      void syncSiteContent(contentFromState(next));
+      return next;
+    });
   }, []);
 
   const deleteGuestbook = useCallback((id: string) => {
@@ -1184,6 +1240,7 @@ export function HubProvider({
     void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/invites", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/visits", { method: "DELETE" }).catch(() => undefined);
+    void fetch("/api/site-content", { method: "DELETE" }).catch(() => undefined);
     setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);
 
