@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LanguageSelect } from "@/components/site/LanguageSelect";
 import { MOBILE_TABS, NAV_MORE, NAV_PRIMARY } from "@/lib/hub/content";
-import { canSeePage, isPageTemporarilyHidden } from "@/lib/hub/access";
+import { canEditWebsite, canSeePage, isPageTemporarilyHidden } from "@/lib/hub/access";
 import { NAV_I18N } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 import { useHub } from "@/lib/hub/store";
@@ -54,7 +54,7 @@ export function SiteNav() {
                   href={item.href}
                   className={`relative whitespace-nowrap pb-1 font-sans text-[0.62rem] uppercase tracking-[0.2em] transition-colors duration-200 ${
                     active ? "text-[#242424]" : "text-[#242424]/70 hover:text-[#242424]"
-                  } ${state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""}`}
+                  } ${canEditWebsite(state) && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""}`}
                 >
                   {t(NAV_I18N[item.href] ?? item.label)}
                   {active ? (
@@ -79,7 +79,7 @@ export function SiteNav() {
                       key={item.href}
                       href={item.href}
                       className={`block px-4 py-1.5 font-sans text-[0.6rem] uppercase tracking-[0.16em] text-[#242424]/70 hover:text-[#242424] ${
-                        state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
+                        canEditWebsite(state) && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
                       }`}
                     >
                       {t(NAV_I18N[item.href] ?? item.label)}
@@ -132,7 +132,7 @@ export function SiteNav() {
               key={item.href}
               href={item.href}
               className={`min-h-12 border-b border-[#E6E0D7]/70 py-3 font-sans text-base uppercase tracking-[0.14em] text-[#242424] ${
-                state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
+                canEditWebsite(state) && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
               }`}
             >
               {t(NAV_I18N[item.href] ?? item.label)}
@@ -144,7 +144,7 @@ export function SiteNav() {
               key={item.href}
               href={item.href}
               className={`min-h-12 border-b border-[#E6E0D7]/70 py-3 font-sans text-base uppercase tracking-[0.14em] text-[#242424] ${
-                state.adminAuthed && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
+                canEditWebsite(state) && isPageTemporarilyHidden(state, item.href) ? "opacity-40" : ""
               }`}
             >
               {t(NAV_I18N[item.href] ?? item.label)}

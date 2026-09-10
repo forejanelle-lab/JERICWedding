@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { EditText } from "@/components/site/EditText";
 import { EventPopup } from "@/components/site/EventPopup";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
-import { canSeeEvent, isWeekendEventHidden, weekendEventHideId } from "@/lib/hub/access";
+import { canEditWebsite, canSeeEvent, isWeekendEventHidden, weekendEventHideId } from "@/lib/hub/access";
 import { WEEKEND_EVENTS } from "@/lib/hub/content";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
@@ -12,7 +12,7 @@ import { useI18n } from "@/lib/i18n/LanguageProvider";
 export default function WeekendPage() {
   const { state, hideSiteItem, showSiteItem } = useHub();
   const { t } = useI18n();
-  const admin = state.adminAuthed;
+  const admin = canEditWebsite(state);
   const events = WEEKEND_EVENTS.filter((event) => {
     if (!canSeeEvent(state, event.id)) return false;
     return admin || !isWeekendEventHidden(state, event.id);

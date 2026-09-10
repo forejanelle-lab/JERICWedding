@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { GameEditor } from "@/components/site/GameEditor";
 import { QuizEngine } from "@/components/site/QuizEngine";
+import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 
@@ -12,7 +13,7 @@ export default function KnowUsPage() {
   const questions = state.gameQuestions["know-us"] ?? [];
   return (
     <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
-      {state.adminAuthed && state.siteEditing ? (
+      {canEditWebsite(state) && state.siteEditing ? (
         <div className="mx-auto mb-10 max-w-2xl">
           <p className="label-caps text-olive">{t("quiz.editGame")}</p>
           <h1 className="mt-2 font-serif text-3xl uppercase">How well do you know us?</h1>

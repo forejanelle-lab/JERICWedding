@@ -37,8 +37,10 @@ import type {
   Visibility,
 } from "@/lib/hub/types";
 import { ADMIN_CODE, KNOW_US_QUESTIONS, PHOTO_QUESTIONS, PREDICTION_QUESTIONS, TRIVIA_QUESTIONS, isCoupleAdmin } from "@/lib/hub/content";
-import { ACCESS_TAGS, DEFAULT_GUEST_TAGS, EVENT_ACCESS, PAGE_ACCESS, canTogglePageHidden, pageKey, slugifyTag } from "@/lib/hub/access";
+import { ACCESS_TAGS, DEFAULT_GUEST_TAGS, EVENT_ACCESS, PAGE_ACCESS, canTogglePageHidden, identityCanEditSite, pageKey, slugifyTag } from "@/lib/hub/access";
 import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/admin";
+import { checkSiteEditor, syncSiteEditors } from "@/lib/editors/client";
+import type { SiteEditor } from "@/lib/editors/match";
 import { collectHubEmails } from "@/lib/rides/emails";
 import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 
@@ -83,6 +85,7 @@ const EMPTY_STATE: HubState = {
   predictions: {},
   completedGames: [],
   adminAuthed: false,
+  siteEditor: false,
   siteEditing: false,
   subscribedEmail: null,
   heroImage: DEFAULT_HERO,
@@ -111,6 +114,16 @@ function migrateSong(song: Song & { votes?: string[] }): Song {
 
 export function householdNames(invite: InviteRecord) {
   return [`${invite.firstName} ${invite.lastName}`, ...invite.party];
+}
+
+function editorsFromInvites(invites: InviteRecord[]): SiteEditor[] {
+  return invites
+    .filter((invite) => invite.canEditSite)
+    .map((invite) => ({
+      email: (invite.email ?? "").trim().toLowerCase(),
+      firstName: invite.firstName.trim(),
+      lastName: invite.lastName.trim(),
+    }));
 }
 
 export function lookupInvites(invites: InviteRecord[], query: string) {
@@ -207,6 +220,7 @@ type HubContextValue = {
   loginAdmin: (code: string) => boolean;
   enableAdmin: () => void;
   logoutAdmin: () => void;
+  setInviteCanEditSite: (id: string, on: boolean) => void;
   setSiteEditing: (on: boolean) => void;
   updateIdentityFromGate: (firstName: string, lastName: string, email: string) => void;
   updateSiteCopy: (id: string, value: string) => void;
@@ -271,6 +285,7 @@ export function HubProvider({
             tags: invite.tags?.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
             invited: invite.invited !== false,
             entered: Boolean(invite.entered),
+            canEditSite: Boolean(invite.canEditSite),
           })),
           gameQuestions: {
             "know-us": parsed.gameQuestions?.["know-us"]?.length ? parsed.gameQuestions["know-us"] : KNOW_US_QUESTIONS,
@@ -284,6 +299,10 @@ export function HubProvider({
           adminAuthed: parsed.identity
             ? isCoupleAdmin(parsed.identity.firstName, parsed.identity.email)
             : Boolean(parsed.adminAuthed || adminFromServer),
+          siteEditor: Boolean(
+            parsed.siteEditor ||
+              identityCanEditSite(parsed.identity, Array.isArray(parsed.invites) ? parsed.invites : []),
+          ),
         });
       } else if (adminFromServer) {
         setState({ ...EMPTY_STATE, adminAuthed: true });
@@ -313,6 +332,29 @@ export function HubProvider({
     if (!ready || !state.adminAuthed) return;
     void syncRideDigestEmails(collectHubEmails(state));
   }, [ready, state.adminAuthed, state.invites, state.rsvps, state.guests, state.identity?.email]);
+
+  useEffect(() => {
+    if (!ready || !state.identity || state.adminAuthed) return;
+    if (!identityCanEditSite(state.identity, state.invites) || state.siteEditor) return;
+    setState((prev) => ({ ...prev, siteEditor: true }));
+  }, [ready, state.adminAuthed, state.identity, state.invites, state.siteEditor]);
+
+  useEffect(() => {
+    if (!ready || !state.identity || state.adminAuthed) return;
+    const identity = state.identity;
+    let cancelled = false;
+    void checkSiteEditor(identity).then((editor) => {
+      if (cancelled) return;
+      setState((prev) => {
+        const next = editor || identityCanEditSite(identity, prev.invites);
+        if (prev.siteEditor === next) return prev;
+        return { ...prev, siteEditor: next, siteEditing: next ? prev.siteEditing : false };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, state.adminAuthed, state.identity?.email, state.identity?.firstName, state.identity?.lastName]);
 
   const me = useMemo(
     () => state.guests.find((guest) => guest.id === state.identity?.guestId) ?? null,
@@ -361,6 +403,7 @@ export function HubProvider({
         identity,
         guests: [guest, ...prev.guests],
         adminAuthed: coupleAdmin,
+        siteEditor: coupleAdmin ? prev.siteEditor : identityCanEditSite(identity, prev.invites),
         siteEditing: coupleAdmin ? prev.siteEditing : false,
       };
     });
@@ -392,6 +435,12 @@ export function HubProvider({
             : guest,
         ),
         adminAuthed: coupleAdmin,
+        siteEditor: coupleAdmin
+          ? prev.siteEditor
+          : identityCanEditSite(
+              { firstName: name, lastName: lastName.trim(), email: mail || prev.identity.email },
+              prev.invites,
+            ),
         siteEditing: coupleAdmin ? prev.siteEditing : false,
       };
     });
@@ -686,17 +735,28 @@ export function HubProvider({
   const upsertInvite = useCallback((invite: InviteRecord) => {
     setState((prev) => {
       const exists = prev.invites.some((item) => item.id === invite.id);
+      const invites = exists
+        ? prev.invites.map((item) => (item.id === invite.id ? invite : item))
+        : [invite, ...prev.invites];
+      void syncSiteEditors(editorsFromInvites(invites));
       return {
         ...prev,
-        invites: exists
-          ? prev.invites.map((item) => (item.id === invite.id ? invite : item))
-          : [invite, ...prev.invites],
+        invites,
+        siteEditor: prev.adminAuthed ? prev.siteEditor : identityCanEditSite(prev.identity, invites),
       };
     });
   }, []);
 
   const deleteInvite = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, invites: prev.invites.filter((item) => item.id !== id) }));
+    setState((prev) => {
+      const invites = prev.invites.filter((item) => item.id !== id);
+      void syncSiteEditors(editorsFromInvites(invites));
+      return {
+        ...prev,
+        invites,
+        siteEditor: prev.adminAuthed ? prev.siteEditor : identityCanEditSite(prev.identity, invites),
+      };
+    });
   }, []);
 
   const importInvites = useCallback((invites: InviteRecord[]) => {
@@ -711,7 +771,26 @@ export function HubProvider({
         if (index >= 0) next[index] = { ...next[index], ...invite, id: next[index].id };
         else next.unshift(invite);
       }
-      return { ...prev, invites: next };
+      void syncSiteEditors(editorsFromInvites(next));
+      return {
+        ...prev,
+        invites: next,
+        siteEditor: prev.adminAuthed ? prev.siteEditor : identityCanEditSite(prev.identity, next),
+      };
+    });
+  }, []);
+
+  const setInviteCanEditSite = useCallback((id: string, on: boolean) => {
+    setState((prev) => {
+      const invites = prev.invites.map((invite) =>
+        invite.id === id ? { ...invite, canEditSite: on } : invite,
+      );
+      void syncSiteEditors(editorsFromInvites(invites));
+      return {
+        ...prev,
+        invites,
+        siteEditor: prev.adminAuthed ? prev.siteEditor : identityCanEditSite(prev.identity, invites),
+      };
     });
   }, []);
 
@@ -1063,6 +1142,7 @@ export function HubProvider({
     window.localStorage.removeItem("jeric-gate-email");
     window.localStorage.removeItem("jeric-gate-name");
     void fetch("/api/rides/digest", { method: "DELETE" }).catch(() => undefined);
+    void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
     setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);
 
@@ -1109,6 +1189,7 @@ export function HubProvider({
       loginAdmin,
       enableAdmin,
       logoutAdmin,
+      setInviteCanEditSite,
       setSiteEditing,
       updateIdentityFromGate,
       updateSiteCopy,
@@ -1169,6 +1250,7 @@ export function HubProvider({
       loginAdmin,
       enableAdmin,
       logoutAdmin,
+      setInviteCanEditSite,
       setSiteEditing,
       updateIdentityFromGate,
       updateSiteCopy,

@@ -181,6 +181,7 @@ export function parseInviteCsv(text: string): InviteRecord[] {
           .filter(Boolean),
         invited: true,
         entered: false,
+        canEditSite: /^(true|yes|1)$/i.test(get("caneditsite") || get("editor") || ""),
       },
     ];
   });

@@ -57,8 +57,34 @@ export function requiredPageTags(_state: HubState, href: string) {
   return match ? PAGE_ACCESS[match] : [];
 }
 
+export function canEditWebsite(state: Pick<HubState, "adminAuthed" | "siteEditor">) {
+  return Boolean(state.adminAuthed || state.siteEditor);
+}
+
+export function inviteMatchesPerson(
+  invite: Pick<InviteRecord, "email" | "firstName" | "lastName">,
+  person: { email?: string; firstName?: string; lastName?: string } | null | undefined,
+) {
+  if (!person) return false;
+  const email = person.email?.trim().toLowerCase() ?? "";
+  const first = person.firstName?.trim().toLowerCase() ?? "";
+  const last = person.lastName?.trim().toLowerCase() ?? "";
+  const inviteEmail = (invite.email ?? "").trim().toLowerCase();
+  const inviteFirst = (invite.firstName ?? "").trim().toLowerCase();
+  const inviteLast = (invite.lastName ?? "").trim().toLowerCase();
+  if (email && inviteEmail && email === inviteEmail) return true;
+  return Boolean(first && last && inviteFirst === first && inviteLast === last);
+}
+
+export function identityCanEditSite(
+  person: { email?: string; firstName?: string; lastName?: string } | null | undefined,
+  invites: InviteRecord[],
+) {
+  return invites.some((invite) => invite.canEditSite && inviteMatchesPerson(invite, person));
+}
+
 export function canSeePage(state: HubState, href: string) {
-  if (isPageTemporarilyHidden(state, href) && !state.adminAuthed) return false;
+  if (isPageTemporarilyHidden(state, href) && !canEditWebsite(state)) return false;
   if (href === "/play" || href.startsWith("/play/")) return true;
   return hasTagAccess(viewerTags(state), requiredPageTags(state, href));
 }
@@ -101,7 +127,7 @@ export function hasTagAccess(userTags: string[], required: string[] | undefined)
 
 export function viewerTags(state: HubState) {
   const ids = allTagIds(state);
-  if (state.adminAuthed) return ids;
+  if (canEditWebsite(state)) return ids;
   const identity = state.identity;
   if (!identity) return ids;
   const email = identity.email.trim().toLowerCase();

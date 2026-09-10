@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Image from "next/image";
+import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
 import { readFileAsDataUrl } from "@/lib/hub/utils";
 
@@ -27,7 +28,7 @@ export function EditImage({
   const { state, updateSiteImage, hideSiteItem, showSiteItem } = useHub();
   const hidden = state.siteHidden.includes(id);
   const resolved = state.siteImages[id] ?? src;
-  const admin = state.adminAuthed && state.siteEditing;
+  const admin = canEditWebsite(state) && state.siteEditing;
   const inputRef = useRef<HTMLInputElement>(null);
   const data = resolved.startsWith("data:");
 

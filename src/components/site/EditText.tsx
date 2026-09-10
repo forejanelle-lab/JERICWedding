@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type RefObject } from "react";
+import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 
@@ -23,7 +24,7 @@ export function EditText({
   const { locale, has, t } = useI18n();
   const english = state.siteCopy[id] ?? children;
   const value = !state.siteEditing && locale !== "en" && has(id) ? t(id) : english;
-  const admin = state.adminAuthed && state.siteEditing;
+  const admin = canEditWebsite(state) && state.siteEditing;
   const [draft, setDraft] = useState(value);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);

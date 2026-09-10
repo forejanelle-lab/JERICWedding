@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { canTogglePageHidden, isPageTemporarilyHidden } from "@/lib/hub/access";
+import { canEditWebsite, canTogglePageHidden, isPageTemporarilyHidden } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
 
 export function AdminBar() {
   const { state, signOut, setSiteEditing, togglePageHidden } = useHub();
   const pathname = usePathname();
   const search = useSearchParams();
-  if (!state.adminAuthed) return null;
+  if (!canEditWebsite(state)) return null;
 
   const onGate = pathname === "/" && (search.get("view") === "gate" || !state.identity);
   const editing = state.siteEditing;
@@ -20,7 +20,13 @@ export function AdminBar() {
     <div className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[70] flex justify-center px-3 pointer-events-none md:bottom-4 md:px-4">
       <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-[#2D3B2D]/20 bg-[#2D3B2D] px-4 py-2.5 text-[#F9F7F2] shadow-[0_12px_30px_rgba(45,59,45,0.25)] md:rounded-full md:px-5">
         <p className="font-sans text-[0.58rem] uppercase tracking-[0.16em]">
-          {hidden ? "Hidden from guests" : editing ? "Editing — Edit a line, then Save" : "Admin"}
+          {hidden
+            ? "Hidden from guests"
+            : editing
+              ? "Editing — Edit a line, then Save"
+              : state.adminAuthed
+                ? "Admin"
+                : "Editor"}
         </p>
         {hideable ? (
           <button
@@ -48,9 +54,11 @@ export function AdminBar() {
         >
           {onGate ? "Site home" : "Welcome screen"}
         </Link>
-        <Link href="/admin" className="font-sans text-[0.58rem] uppercase tracking-[0.16em] text-[#F9F7F2]/80 hover:text-[#F9F7F2]">
-          Admin
-        </Link>
+        {state.adminAuthed ? (
+          <Link href="/admin" className="font-sans text-[0.58rem] uppercase tracking-[0.16em] text-[#F9F7F2]/80 hover:text-[#F9F7F2]">
+            Admin
+          </Link>
+        ) : null}
         <button
           type="button"
           className="font-sans text-[0.58rem] uppercase tracking-[0.16em] text-[#F9F7F2]/80 hover:text-[#F9F7F2]"

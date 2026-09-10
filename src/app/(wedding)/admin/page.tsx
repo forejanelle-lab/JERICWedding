@@ -52,7 +52,7 @@ export default function AdminPage() {
         <div>
           <h1 className="font-serif text-3xl uppercase">Admin</h1>
           <p className="mt-2 max-w-xl font-sans text-sm text-charcoal/65">
-            Guest lists and tags live here. On any page, tap Edit in the bottom bar, change a line, then Save.
+            Guest lists and tags live here. Turn on Can edit site for a guest so they can tap Edit, change a line, then Save.
           </p>
         </div>
         <div className="flex gap-3">
@@ -279,7 +279,7 @@ function RsvpColumn({ title, items, empty }: { title: string; items: RsvpRecord[
 }
 
 function InviteManager() {
-  const { state, upsertInvite, deleteInvite, importInvites } = useHub();
+  const { state, upsertInvite, deleteInvite, importInvites, setInviteCanEditSite } = useHub();
   const [editing, setEditing] = useState<InviteRecord | null>(null);
 
   return (
@@ -328,6 +328,7 @@ function InviteManager() {
               <th className="px-4 py-3">Italy?</th>
               <th className="px-4 py-3">Party</th>
               <th className="px-4 py-3">Tags</th>
+              <th className="px-4 py-3">Edit site</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -353,6 +354,17 @@ function InviteManager() {
                 <td className="px-4 py-3">{invite.inItaly ? "Yes" : "No"}</td>
                 <td className="px-4 py-3">{householdNames(invite).join(", ")}</td>
                 <td className="px-4 py-3 text-taupe">{inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}</td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    className={`rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${
+                      invite.canEditSite ? "bg-forest text-ivory" : "bg-cream text-taupe"
+                    }`}
+                    onClick={() => setInviteCanEditSite(invite.id, !invite.canEditSite)}
+                  >
+                    {invite.canEditSite ? "Editor" : "Off"}
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-right">
                   <button type="button" className="mr-3 font-sans text-xs uppercase tracking-widest text-olive" onClick={() => setEditing(invite)}>
                     Edit
@@ -383,6 +395,7 @@ function InviteForm({
   const catalog = tagCatalog(state);
   const [inItaly, setInItaly] = useState(initial?.inItaly ?? false);
   const [tags, setTags] = useState<string[]>(inviteTags(initial, state));
+  const [canEditSite, setCanEditSite] = useState(Boolean(initial?.canEditSite));
 
   return (
     <form
@@ -410,9 +423,11 @@ function InviteForm({
           tags,
           invited: initial?.invited !== false,
           entered: initial?.entered ?? false,
+          canEditSite,
         });
         event.currentTarget.reset();
         setInItaly(false);
+        setCanEditSite(false);
         setTags(allTagIds(state));
       }}
     >
@@ -436,6 +451,10 @@ function InviteForm({
       <label className="flex items-center gap-3 font-sans text-sm md:col-span-2">
         <input type="checkbox" checked={inItaly} onChange={(event) => setInItaly(event.target.checked)} />
         Lives in Italy (hide arrival / departure times at RSVP)
+      </label>
+      <label className="flex items-center gap-3 font-sans text-sm md:col-span-2">
+        <input type="checkbox" checked={canEditSite} onChange={(event) => setCanEditSite(event.target.checked)} />
+        Can edit the website (Edit / Save on any page)
       </label>
       <label className="md:col-span-2">
         <span className="label-caps">Party / plus-ones</span>

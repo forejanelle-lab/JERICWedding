@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GameEditor } from "@/components/site/GameEditor";
 import { EditImage } from "@/components/site/EditImage";
 import { EditText } from "@/components/site/EditText";
+import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 
@@ -19,7 +20,7 @@ export default function PhotoGamePage() {
   const question = questions[index];
   const played = state.completedGames.includes("photos");
 
-  if (state.adminAuthed && state.siteEditing) {
+  if (canEditWebsite(state) && state.siteEditing) {
     return (
       <main className="px-4 pt-[calc(4.75rem+env(safe-area-inset-top))] pb-8 md:px-5 md:py-28">
         <div className="mx-auto max-w-2xl">

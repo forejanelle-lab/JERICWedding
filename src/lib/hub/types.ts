@@ -159,6 +159,7 @@ export type InviteRecord = {
   tags: string[];
   invited?: boolean;
   entered?: boolean;
+  canEditSite?: boolean;
 };
 
 export type GuestPhoto = {
@@ -280,6 +281,7 @@ export type HubState = {
   predictions: Record<string, string>;
   completedGames: string[];
   adminAuthed: boolean;
+  siteEditor: boolean;
   siteEditing: boolean;
   subscribedEmail: string | null;
   heroImage: string;

@@ -5,7 +5,7 @@ import { AddToCalendar } from "@/components/site/Interactive";
 import { EditText } from "@/components/site/EditText";
 import { useHub } from "@/lib/hub/store";
 import { mapsUrl } from "@/lib/hub/utils";
-import { isWeekendEventHidden, weekendEventHideId } from "@/lib/hub/access";
+import { canEditWebsite, isWeekendEventHidden, weekendEventHideId } from "@/lib/hub/access";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 import type { WeekendEvent } from "@/lib/hub/types";
 
@@ -42,7 +42,7 @@ export function EventPopup({ event, onClose }: { event: WeekendEvent; onClose: (
         <EditText id={`weekend.${event.id}.detail.title`} as="h2" className="mt-3 pr-12 font-serif text-3xl font-light tracking-[0.08em] uppercase">
           {event.title}
         </EditText>
-        {state.adminAuthed ? (
+        {canEditWebsite(state) ? (
           <p className="mt-3 font-sans text-xs text-taupe">
             {state.siteEditing
               ? "Tap a line to edit time, dress, notes, and the rest. Save from the bottom bar."
