@@ -16,5 +16,5 @@ export default async function Page({
     return <GatePage next={safeNextPath(params.next)} />;
   }
 
-  return <HomePage />;
+  return <HomePage guestFirstName={session.firstName} />;
 }

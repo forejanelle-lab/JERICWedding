@@ -7,10 +7,10 @@ import type { GateSession } from "@/lib/gate/session";
 
 export function ApplyGateIdentity({ session }: { session: GateSession }) {
   const { join, enableAdmin, logoutAdmin, updateIdentityFromGate, recordGuestEntry, state, ready } = useHub();
-  const applied = useRef(false);
+  const joining = useRef(false);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !session.firstName) return;
     if (isCoupleAdmin(session.firstName, session.email)) enableAdmin();
     else logoutAdmin();
     recordGuestEntry({
@@ -22,16 +22,18 @@ export function ApplyGateIdentity({ session }: { session: GateSession }) {
       fromList: session.fromList,
     });
     if (state.identity) {
+      joining.current = false;
       if (
         state.identity.firstName !== session.firstName ||
+        state.identity.lastName !== session.lastName ||
         state.identity.email !== session.email
       ) {
         updateIdentityFromGate(session.firstName, session.lastName, session.email);
       }
       return;
     }
-    if (applied.current) return;
-    applied.current = true;
+    if (joining.current) return;
+    joining.current = true;
     join({
       firstName: session.firstName,
       lastName: session.lastName,

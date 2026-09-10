@@ -43,10 +43,10 @@ const TIMELINE = [
   { day: "Monday, September 6", title: "Goodbye Brunch", note: "One last toast together", icon: "cup", eventId: "brunch" },
 ] as const;
 
-export function HomePage() {
+export function HomePage({ guestFirstName = "" }: { guestFirstName?: string }) {
   const { state } = useHub();
   const { t } = useI18n();
-  const firstName = state.identity?.firstName?.trim();
+  const firstName = (guestFirstName || state.identity?.firstName || "").trim();
   const timeline = TIMELINE.filter(
     (event) => canSeeEvent(state, event.eventId) && !isWeekendEventHidden(state, event.eventId),
   );

@@ -41,6 +41,7 @@ import { ACCESS_TAGS, DEFAULT_GUEST_TAGS, EVENT_ACCESS, PAGE_ACCESS, canTogglePa
 import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/admin";
 import { checkSiteEditor, syncSiteEditors } from "@/lib/editors/client";
 import type { SiteEditor } from "@/lib/editors/match";
+import { fetchSharedInvites, syncSharedInvites } from "@/lib/invites/client";
 import { collectHubEmails } from "@/lib/rides/emails";
 import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 
@@ -113,7 +114,19 @@ function migrateSong(song: Song & { votes?: string[] }): Song {
 }
 
 export function householdNames(invite: InviteRecord) {
-  return [`${invite.firstName} ${invite.lastName}`, ...invite.party];
+  return [`${invite.firstName} ${invite.lastName}`.trim(), ...invite.party.map((name) => name.trim()).filter(Boolean)];
+}
+
+function mergeInviteLists(local: InviteRecord[], remote: InviteRecord[]) {
+  const nameKey = (invite: InviteRecord) =>
+    `${invite.firstName.trim().toLowerCase()}|${invite.lastName.trim().toLowerCase()}`;
+  const byId = new Map(remote.map((invite) => [invite.id, invite]));
+  const names = new Set(remote.map(nameKey));
+  for (const invite of local) {
+    if (byId.has(invite.id) || names.has(nameKey(invite))) continue;
+    byId.set(invite.id, invite);
+  }
+  return [...byId.values()];
 }
 
 function editorsFromInvites(invites: InviteRecord[]): SiteEditor[] {
@@ -317,6 +330,28 @@ export function HubProvider({
     if (!ready) return;
     persistHubState(state);
   }, [state, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    void fetchSharedInvites().then((remote) => {
+      if (cancelled) return;
+      setState((prev) => {
+        if (!remote.length) {
+          if (prev.invites.length) void syncSharedInvites(prev.invites);
+          return prev;
+        }
+        const invites = mergeInviteLists(prev.invites, remote);
+        if (invites === prev.invites || (invites.length === prev.invites.length && invites.every((invite, index) => invite.id === prev.invites[index]?.id))) {
+          return prev;
+        }
+        return { ...prev, invites };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
 
   useEffect(() => {
     if (!ready || state.adminAuthed) return;
@@ -739,6 +774,7 @@ export function HubProvider({
         ? prev.invites.map((item) => (item.id === invite.id ? invite : item))
         : [invite, ...prev.invites];
       void syncSiteEditors(editorsFromInvites(invites));
+      void syncSharedInvites(invites);
       return {
         ...prev,
         invites,
@@ -751,6 +787,7 @@ export function HubProvider({
     setState((prev) => {
       const invites = prev.invites.filter((item) => item.id !== id);
       void syncSiteEditors(editorsFromInvites(invites));
+      void syncSharedInvites(invites);
       return {
         ...prev,
         invites,
@@ -772,6 +809,7 @@ export function HubProvider({
         else next.unshift(invite);
       }
       void syncSiteEditors(editorsFromInvites(next));
+      void syncSharedInvites(next);
       return {
         ...prev,
         invites: next,
@@ -786,6 +824,7 @@ export function HubProvider({
         invite.id === id ? { ...invite, canEditSite: on } : invite,
       );
       void syncSiteEditors(editorsFromInvites(invites));
+      void syncSharedInvites(invites);
       return {
         ...prev,
         invites,
@@ -1143,6 +1182,7 @@ export function HubProvider({
     window.localStorage.removeItem("jeric-gate-name");
     void fetch("/api/rides/digest", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
+    void fetch("/api/invites", { method: "DELETE" }).catch(() => undefined);
     setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);
 
