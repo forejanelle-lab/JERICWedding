@@ -6,11 +6,12 @@ import { allTagIds, inviteTags, tagCatalog, tagLabel } from "@/lib/hub/access";
 import { ADMIN_CODE, EVENT_LABELS } from "@/lib/hub/content";
 import { AccessTagEditor, GameEditor } from "@/components/site/GameEditor";
 import { householdNames, useHub } from "@/lib/hub/store";
-import { parseInviteCsv, formatDate, formatTime } from "@/lib/hub/utils";
+import { parseInviteCsv, formatDate, formatTime, relativeTime } from "@/lib/hub/utils";
 import { sendRideDigestNow } from "@/lib/rides/actions";
 import type { EventId, InviteRecord, RsvpRecord } from "@/lib/hub/types";
+import type { SiteVisit, VisitorSummary } from "@/lib/visits/types";
 
-type Tab = "invites" | "rsvps" | "access" | "rides" | "games" | "songs" | "photos";
+type Tab = "invites" | "visits" | "rsvps" | "access" | "rides" | "games" | "songs" | "photos";
 
 export default function AdminPage() {
   const hub = useHub();
@@ -61,7 +62,7 @@ export default function AdminPage() {
         </div>
       </div>
       <div className="mx-auto mt-8 flex max-w-6xl flex-wrap gap-2">
-        {(["invites", "rsvps", "access", "rides", "games", "songs", "photos"] as Tab[]).map((item) => (
+        {(["invites", "visits", "rsvps", "access", "rides", "games", "songs", "photos"] as Tab[]).map((item) => (
           <button
             key={item}
             type="button"
@@ -77,6 +78,8 @@ export default function AdminPage() {
 
       <div className="mx-auto mt-10 max-w-6xl">
         {tab === "invites" ? <InviteManager /> : null}
+
+        {tab === "visits" ? <VisitsBoard /> : null}
 
         {tab === "rsvps" ? <RsvpBoard rsvps={state.rsvps} /> : null}
 
@@ -275,6 +278,130 @@ function RsvpColumn({ title, items, empty }: { title: string; items: RsvpRecord[
         ))}
       </div>
     </section>
+  );
+}
+
+function formatWhen(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function VisitsBoard() {
+  const [visitors, setVisitors] = useState<VisitorSummary[]>([]);
+  const [events, setEvents] = useState<SiteVisit[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const response = await fetch("/api/visits", { cache: "no-store" });
+        if (!response.ok) {
+          if (!cancelled) setError("Couldn't load visits yet. Stay signed in as admin and refresh.");
+          return;
+        }
+        const data = (await response.json()) as { events?: SiteVisit[]; visitors?: VisitorSummary[] };
+        if (cancelled) return;
+        setEvents(Array.isArray(data.events) ? data.events : []);
+        setVisitors(Array.isArray(data.visitors) ? data.visitors : []);
+        setError("");
+      } catch {
+        if (!cancelled) setError("Couldn't load visits yet.");
+      }
+    }
+    const start = window.setTimeout(() => void load(), 300);
+    const timer = window.setInterval(() => void load(), 20000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(start);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const today = events.filter((event) => event.at.slice(0, 10) === todayKey).length;
+
+  return (
+    <div className="space-y-8">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="soft-card p-5">
+          <p className="label-caps text-olive">People</p>
+          <p className="mt-2 font-serif text-4xl">{visitors.length}</p>
+        </div>
+        <div className="soft-card p-5">
+          <p className="label-caps text-olive">Today</p>
+          <p className="mt-2 font-serif text-4xl">{today}</p>
+        </div>
+        <div className="soft-card p-5">
+          <p className="label-caps text-olive">All activity</p>
+          <p className="mt-2 font-serif text-4xl">{events.length}</p>
+        </div>
+      </div>
+      {error ? <p className="font-sans text-sm text-olive">{error}</p> : null}
+      {visitors.length === 0 && !error ? (
+        <p className="font-sans text-sm text-taupe">No logins or visits yet. They appear here when someone enters the site.</p>
+      ) : null}
+      {visitors.length ? (
+        <div className="overflow-x-auto rounded-2xl border border-taupe/15">
+          <table className="min-w-full text-left font-sans text-sm">
+            <thead className="bg-cream text-[0.6rem] uppercase tracking-[0.16em] text-taupe">
+              <tr>
+                <th className="px-4 py-3">Guest</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Last seen</th>
+                <th className="px-4 py-3">First visit</th>
+                <th className="px-4 py-3">Logins</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visitors.map((visitor) => (
+                <tr key={visitor.key} className="border-t border-taupe/10">
+                  <td className="px-4 py-3">
+                    {visitor.firstName} {visitor.lastName}
+                  </td>
+                  <td className="px-4 py-3">{visitor.email || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className="block">{relativeTime(visitor.lastSeen)}</span>
+                    <span className="text-xs text-taupe">{formatWhen(visitor.lastSeen)}</span>
+                  </td>
+                  <td className="px-4 py-3 text-taupe">{formatWhen(visitor.firstSeen)}</td>
+                  <td className="px-4 py-3">{visitor.logins}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {events.length ? (
+        <section>
+          <h2 className="font-serif text-2xl uppercase">Recent activity</h2>
+          <div className="mt-4 space-y-2">
+            {events.slice(0, 40).map((event) => (
+              <article key={event.id} className="soft-card flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <p className="font-sans text-sm">
+                  <span className="font-medium">
+                    {event.firstName} {event.lastName}
+                  </span>
+                  <span className="text-charcoal/70">
+                    {" "}
+                    {event.kind === "login" ? "signed in" : "visited"}
+                  </span>
+                </p>
+                <p className="font-sans text-xs uppercase tracking-[0.12em] text-taupe">
+                  {relativeTime(event.at)} · {formatWhen(event.at)}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
   );
 }
 

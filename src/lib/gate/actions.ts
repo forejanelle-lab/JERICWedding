@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { GATE_COOKIE, GATE_PASSCODE, safeNextPath, type GateSession } from "@/lib/gate/session";
 import { findStoredInvite, loadInviteStore } from "@/lib/invites/store";
+import { recordVisit } from "@/lib/visits/store";
 
 export async function enterWithEmail(formData: FormData) {
   const passcode = String(formData.get("passcode") ?? "").trim();
@@ -51,6 +52,13 @@ export async function enterWithEmail(formData: FormData) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 90,
+  });
+
+  await recordVisit({
+    firstName: session.firstName,
+    lastName: session.lastName,
+    email: session.email,
+    kind: "login",
   });
 
   redirect(next);

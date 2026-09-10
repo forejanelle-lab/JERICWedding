@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { GATE_COOKIE, safeNextPath, type GateSession } from "@/lib/gate/session";
 import { verifyMagicToken } from "@/lib/gate/token";
+import { recordVisit } from "@/lib/visits/store";
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") ?? "";
@@ -33,6 +34,12 @@ export async function GET(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 90,
+  });
+  await recordVisit({
+    firstName: session.firstName,
+    lastName: session.lastName,
+    email: session.email,
+    kind: "login",
   });
   return response;
 }

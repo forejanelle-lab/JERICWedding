@@ -1183,6 +1183,7 @@ export function HubProvider({
     void fetch("/api/rides/digest", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/invites", { method: "DELETE" }).catch(() => undefined);
+    void fetch("/api/visits", { method: "DELETE" }).catch(() => undefined);
     setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);
 
