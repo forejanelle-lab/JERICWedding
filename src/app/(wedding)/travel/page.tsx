@@ -7,6 +7,7 @@ import { EditText } from "@/components/site/EditText";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
 import { AIRPORTS, HOTELS } from "@/lib/hub/content";
 import { canSeePage } from "@/lib/hub/access";
+import { mapsUrl } from "@/lib/hub/utils";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 
@@ -56,32 +57,38 @@ export default function TravelPage() {
         <EditText id="travel.airports.body" as="p" multiline className="mb-10 max-w-2xl font-sans text-charcoal/70">
           If you can, fly into Naples. If the fare to Rome is kinder, take Frecciarossa to Napoli Centrale (about 70 minutes) and continue by car or shuttle.
         </EditText>
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="overflow-hidden rounded-2xl border border-taupe/15">
-            <iframe
-              title={t("travel.mapTitle")}
-              src="https://www.openstreetmap.org/export/embed.html?bbox=13.8%2C40.2%2C15.5%2C41.5&layer=mapnik&marker=41.08%2C14.28"
-              className="h-80 w-full"
-              loading="lazy"
-            />
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <EditText id="travel.mapTitle" as="h3" className="font-serif text-2xl font-light uppercase">
+              {t("travel.mapTitle")}
+            </EditText>
+            <p className="mt-2 font-sans text-sm text-charcoal/70">Casale dei Mascioni, Campania</p>
           </div>
-          <div className="space-y-6">
-            {[
-              ["Train", "Rome → Naples on Frecciarossa or Italo. Book seats now for early September."],
-              ["Taxi", "NAP official taxis to the Caserta area run roughly €60–80. Agree before you ride."],
-              ["Rental car", "Useful for the coast; less necessary if you're staying in Naples and using shuttles."],
-              ["Shuttles", "Wedding-event coaches from recommended hotels. Times in Updates closer to the date."],
-            ].map(([title, body]) => (
-              <article key={title}>
-                <EditText id={`travel.mode.${title}.title`} as="h3" className="font-sans text-[0.65rem] uppercase tracking-[0.25em] text-olive">
-                  {title}
-                </EditText>
-                <EditText id={`travel.mode.${title}.body`} as="p" multiline className="mt-2 font-sans text-sm leading-relaxed text-charcoal/70">
-                  {body}
-                </EditText>
-              </article>
-            ))}
-          </div>
+          <a
+            href={mapsUrl("Casale+dei+Mascioni+San+Prisco")}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary"
+          >
+            {t("ui.openMap")}
+          </a>
+        </div>
+        <div className="grid gap-8 md:grid-cols-2">
+          {[
+            ["Train", "Rome → Naples on Frecciarossa or Italo. Book seats now for early September."],
+            ["Taxi", "NAP official taxis to the Caserta area run roughly €60–80. Agree before you ride."],
+            ["Rental car", "Useful for the coast; less necessary if you're staying in Naples and using shuttles."],
+            ["Shuttles", "Wedding-event coaches from recommended hotels. Times in Updates closer to the date."],
+          ].map(([title, body]) => (
+            <article key={title}>
+              <EditText id={`travel.mode.${title}.title`} as="h3" className="font-sans text-[0.65rem] uppercase tracking-[0.25em] text-olive">
+                {title}
+              </EditText>
+              <EditText id={`travel.mode.${title}.body`} as="p" multiline className="mt-2 font-sans text-sm leading-relaxed text-charcoal/70">
+                {body}
+              </EditText>
+            </article>
+          ))}
         </div>
       </SectionWrap>
 

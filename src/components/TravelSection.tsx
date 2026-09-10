@@ -61,14 +61,15 @@ export function TravelSection() {
                 />
               </div>
 
-              <div className="mt-6 overflow-hidden border border-taupe/20">
-                <iframe
-                  title="Map of Campania, Italy"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=13.8%2C40.2%2C15.5%2C41.5&layer=mapnik&marker=41.0%2C14.5"
-                  className="h-64 w-full grayscale-[30%] contrast-[0.95] md:h-80"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+              <div className="mt-6">
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Casale+dei+Mascioni+San+Prisco"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary"
+                >
+                  Open map
+                </a>
               </div>
               <p className="mt-3 text-center font-sans text-xs text-taupe">
                 Campania, Italy — wedding venue region

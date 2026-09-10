@@ -76,18 +76,6 @@ export function mapsUrl(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
-export function osmEmbed(query: string) {
-  const presets: Record<string, string> = {
-    "Casale+dei+Mascioni+San+Prisco": "https://www.openstreetmap.org/export/embed.html?bbox=14.15%2C41.00%2C14.40%2C41.15&layer=mapnik&marker=41.085%2C14.28",
-    "Positano+Italy": "https://www.openstreetmap.org/export/embed.html?bbox=14.45%2C40.61%2C14.52%2C40.65&layer=mapnik&marker=40.628%2C14.485",
-    "Napoli": "https://www.openstreetmap.org/export/embed.html?bbox=14.20%2C40.82%2C14.30%2C40.87&layer=mapnik&marker=40.851%2C14.268",
-  };
-  return (
-    presets[query] ??
-    `https://www.openstreetmap.org/export/embed.html?bbox=13.8%2C40.2%2C15.5%2C41.5&layer=mapnik`
-  );
-}
-
 export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
