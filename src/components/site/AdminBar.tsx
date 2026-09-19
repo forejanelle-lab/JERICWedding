@@ -21,7 +21,7 @@ export function AdminBar() {
       <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-[#2D3B2D]/20 bg-[#2D3B2D] px-4 py-2.5 text-[#F9F7F2] shadow-[0_12px_30px_rgba(45,59,45,0.25)] md:rounded-full md:px-5">
         <p className="font-sans text-[0.58rem] uppercase tracking-[0.16em]">
           {hidden
-            ? "Hidden from guests"
+            ? "Pending for guests"
             : editing
               ? "Editing — Edit a line, then Save"
               : state.adminAuthed
@@ -38,7 +38,7 @@ export function AdminBar() {
             }
             onClick={() => togglePageHidden(pathname)}
           >
-            {hidden ? "Unhide" : "Hide page"}
+            {hidden ? "Show page" : "Mark pending"}
           </button>
         ) : null}
         <button

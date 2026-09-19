@@ -84,7 +84,6 @@ export function identityCanEditSite(
 }
 
 export function canSeePage(state: HubState, href: string) {
-  if (isPageTemporarilyHidden(state, href) && !canEditWebsite(state)) return false;
   if (href === "/play" || href.startsWith("/play/")) return true;
   return hasTagAccess(viewerTags(state), requiredPageTags(state, href));
 }
