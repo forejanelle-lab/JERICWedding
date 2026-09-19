@@ -1042,9 +1042,12 @@ export function HubProvider({
   }, []);
 
   const submitRsvp = useCallback((record: Omit<RsvpRecord, "id" | "submittedAt">) => {
+    const email = record.email.trim() || state.identity?.email?.trim() || "";
+    const nameParts = record.name.trim().split(/\s+/).filter(Boolean);
     setState((prev) => {
       const rsvp: RsvpRecord = {
         ...record,
+        email,
         id: uid("rsvp"),
         submittedAt: new Date().toISOString(),
       };
@@ -1064,13 +1067,28 @@ export function HubProvider({
                     arrivalDate: record.arrivalDate,
                     departureDate: record.departureDate,
                     stay: record.stay || guest.stay,
+                    email: email || guest.email,
                   }
                 : guest,
             )
           : prev.guests,
       };
     });
-  }, []);
+    if (!email) return;
+    void fetch("/api/rsvp/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        attending: record.attending,
+        email,
+        name: record.name,
+        firstName: nameParts[0] || state.identity?.firstName || "",
+        lastName: nameParts.slice(1).join(" ") || state.identity?.lastName || "",
+      }),
+    }).catch((error) => {
+      console.error("rsvp confirmation request failed:", error);
+    });
+  }, [state.identity]);
 
   const publishAnnouncement = useCallback((input: Omit<Announcement, "id" | "publishedAt">) => {
     setState((prev) => ({

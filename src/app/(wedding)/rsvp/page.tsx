@@ -10,6 +10,10 @@ import { useI18n } from "@/lib/i18n/LanguageProvider";
 import type { EventId, InviteRecord, StayArea } from "@/lib/hub/types";
 import { formatDate, formatTime } from "@/lib/hub/utils";
 
+function hasEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export default function RsvpPage() {
   const { submitRsvp, state } = useHub();
   const { t, locale } = useI18n();
@@ -74,7 +78,7 @@ export default function RsvpPage() {
     setForm((prev) => ({
       ...prev,
       name: `${record.firstName} ${record.lastName}`,
-      email: record.email,
+      email: record.email || state.identity?.email || prev.email,
       events: eventsForInvite(record),
       guestCount: household.length,
       inviteId: record.id,
@@ -84,6 +88,9 @@ export default function RsvpPage() {
   }
 
   function next() {
+    if ((step === 1 && !form.attending) || step >= stepKeys.length - 1) {
+      if (!hasEmail(form.email)) return;
+    }
     if (step === 1 && !form.attending) {
       submitRsvp({ ...form, events: [], guestCount: 0, partyAttending: [] });
       setDone(true);
@@ -192,7 +199,7 @@ export default function RsvpPage() {
                     id: `new-${Date.now()}`,
                     firstName: first,
                     lastName: rest.join(" "),
-                    email: "",
+                    email: state.identity?.email || "",
                     location: "",
                     inItaly: false,
                     party: [],
@@ -223,6 +230,18 @@ export default function RsvpPage() {
                   {value ? t("rsvp.yes") : t("rsvp.no")}
                 </button>
               ))}
+              {!hasEmail(form.email) ? (
+                <label className="block text-left">
+                  <span className="label-caps">{t("join.email")}</span>
+                  <input
+                    className="input-line"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => setForm({ ...form, email: event.target.value })}
+                    autoComplete="email"
+                  />
+                </label>
+              ) : null}
             </div>
           ) : null}
 
@@ -333,6 +352,20 @@ export default function RsvpPage() {
           {currentKey === "confirm" ? (
             <dl className="space-y-3 font-sans text-sm text-charcoal/80">
               <div className="flex justify-between"><dt>{t("rsvp.name")}</dt><dd>{form.name}</dd></div>
+              {hasEmail(form.email) ? (
+                <div className="flex justify-between gap-6"><dt>{t("join.email")}</dt><dd className="text-right">{form.email}</dd></div>
+              ) : (
+                <label className="block text-left">
+                  <span className="label-caps">{t("join.email")}</span>
+                  <input
+                    className="input-line"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => setForm({ ...form, email: event.target.value })}
+                    autoComplete="email"
+                  />
+                </label>
+              )}
               <div className="flex justify-between"><dt>{t("rsvp.attending")}</dt><dd>{form.attending ? t("rsvp.yes") : t("rsvp.no")}</dd></div>
               <div className="flex justify-between gap-6"><dt>{t("rsvp.party")}</dt><dd className="text-right">{form.partyAttending.join(", ") || form.name}</dd></div>
               <div className="flex justify-between gap-6"><dt>{t("rsvp.events")}</dt><dd className="text-right">{form.events.map((e) => eventLabel(e)).join(", ")}</dd></div>
@@ -364,7 +397,12 @@ export default function RsvpPage() {
               <button type="button" className="btn-secondary" onClick={() => setStep((value) => Math.max(0, value - 1))}>
                 {t("rsvp.back")}
               </button>
-              <button type="button" className="btn-primary" onClick={next}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={next}
+                disabled={((step === 1 && !form.attending) || step >= stepKeys.length - 1) && !hasEmail(form.email)}
+              >
                 {step >= stepKeys.length - 1 ? t("rsvp.submit") : t("rsvp.continue")}
               </button>
             </div>
