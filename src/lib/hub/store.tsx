@@ -41,6 +41,8 @@ import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/ad
 import { checkSiteEditor, syncSiteEditors } from "@/lib/editors/client";
 import type { SiteEditor } from "@/lib/editors/match";
 import { fetchSharedInvites, syncSharedInvites } from "@/lib/invites/client";
+import { fetchSharedRsvps, syncSharedRsvp } from "@/lib/rsvp/client";
+import { mergeRsvpLists } from "@/lib/rsvp/merge";
 import { fetchSiteContent, syncSiteContent } from "@/lib/site-content/client";
 import type { SiteContent } from "@/lib/site-content/types";
 import { collectHubEmails } from "@/lib/rides/emails";
@@ -358,6 +360,30 @@ export function HubProvider({
           return prev;
         }
         return { ...prev, invites };
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    void fetchSharedRsvps().then((remote) => {
+      if (cancelled || !remote.length) return;
+      setState((prev) => {
+        const rsvps = mergeRsvpLists(prev.rsvps, remote);
+        if (
+          rsvps.length === prev.rsvps.length &&
+          rsvps.every(
+            (rsvp, index) =>
+              rsvp.id === prev.rsvps[index]?.id && rsvp.submittedAt === prev.rsvps[index]?.submittedAt,
+          )
+        ) {
+          return prev;
+        }
+        return { ...prev, rsvps };
       });
     });
     return () => {
@@ -1048,17 +1074,17 @@ export function HubProvider({
   const submitRsvp = useCallback((record: Omit<RsvpRecord, "id" | "submittedAt">) => {
     const email = record.email.trim() || state.identity?.email?.trim() || "";
     const nameParts = record.name.trim().split(/\s+/).filter(Boolean);
+    const rsvp: RsvpRecord = {
+      ...record,
+      email,
+      id: uid("rsvp"),
+      submittedAt: new Date().toISOString(),
+    };
     setState((prev) => {
-      const rsvp: RsvpRecord = {
-        ...record,
-        email,
-        id: uid("rsvp"),
-        submittedAt: new Date().toISOString(),
-      };
       const events = record.attending ? record.events : [];
       return {
         ...prev,
-        rsvps: [rsvp, ...prev.rsvps],
+        rsvps: mergeRsvpLists([rsvp, ...prev.rsvps], []),
         guests: prev.identity
           ? prev.guests.map((guest) =>
               guest.id === prev.identity?.guestId
@@ -1078,19 +1104,10 @@ export function HubProvider({
           : prev.guests,
       };
     });
-    if (!email) return;
-    void fetch("/api/rsvp/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        attending: record.attending,
-        email,
-        name: record.name,
-        firstName: nameParts[0] || state.identity?.firstName || "",
-        lastName: nameParts.slice(1).join(" ") || state.identity?.lastName || "",
-      }),
-    }).catch((error) => {
-      console.error("rsvp confirmation request failed:", error);
+    void syncSharedRsvp({
+      ...rsvp,
+      firstName: nameParts[0] || state.identity?.firstName || "",
+      lastName: nameParts.slice(1).join(" ") || state.identity?.lastName || "",
     });
   }, [state.identity]);
 
@@ -1262,6 +1279,7 @@ export function HubProvider({
     void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/invites", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/visits", { method: "DELETE" }).catch(() => undefined);
+    void fetch("/api/rsvp", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/site-content", { method: "DELETE" }).catch(() => undefined);
     setState({ ...EMPTY_STATE, adminAuthed: true });
   }, []);

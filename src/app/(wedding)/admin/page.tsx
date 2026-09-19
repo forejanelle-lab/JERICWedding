@@ -240,6 +240,7 @@ function RsvpColumn({ title, items, empty }: { title: string; items: RsvpRecord[
             <p className="mt-1 text-charcoal/70">
               {rsvp.partyAttending.join(", ") || `${partySize(rsvp)} ${partySize(rsvp) === 1 ? "guest" : "guests"}`}
             </p>
+            {rsvp.email ? <p className="mt-1 text-charcoal/65">{rsvp.email}</p> : null}
             {rsvp.attending ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {(Object.keys(EVENT_LABELS) as EventId[]).map((eventId) => {
