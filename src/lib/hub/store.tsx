@@ -920,6 +920,7 @@ export function HubProvider({
           firstName: first,
           lastName: last,
           email,
+          phone: "",
           location: input.location?.trim() ?? "",
           inItaly: false,
           party: [],

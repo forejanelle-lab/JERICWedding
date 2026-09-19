@@ -175,6 +175,7 @@ export function parseInviteCsv(text: string): InviteRecord[] {
         firstName,
         lastName,
         email: get("email"),
+        phone: get("phone") || get("mobile") || get("cell"),
         location,
         inItaly,
         party,

@@ -48,17 +48,17 @@ export default function AdminPage() {
   const unmatched = state.rides.filter((ride) => ride.status === "open" || ride.status === "pending");
 
   return (
-    <main className="px-5 py-28">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+    <main className="px-4 pb-10 pt-[calc(5.5rem+env(safe-area-inset-top))] sm:px-5 md:py-28">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-serif text-3xl uppercase">Admin</h1>
           <p className="mt-2 max-w-xl font-sans text-sm text-charcoal/65">
             Guest lists and tags live here. Turn on Can edit site for a guest so they can tap Edit, change a line, then Save.
           </p>
         </div>
-        <div className="flex gap-3">
-          <button type="button" className="btn-secondary !px-4 !py-2" onClick={hub.resetHub}>Clear all data</button>
-          <button type="button" className="btn-secondary !px-4 !py-2" onClick={() => void signOut()}>Sign out</button>
+        <div className="flex flex-wrap gap-3">
+          <button type="button" className="btn-secondary !min-h-11 !px-4 !py-2" onClick={hub.resetHub}>Clear all data</button>
+          <button type="button" className="btn-secondary !min-h-11 !px-4 !py-2" onClick={() => void signOut()}>Sign out</button>
         </div>
       </div>
       <div className="mx-auto mt-8 flex max-w-6xl flex-wrap gap-2">
@@ -67,7 +67,7 @@ export default function AdminPage() {
             key={item}
             type="button"
             onClick={() => setTab(item)}
-            className={`rounded-full px-4 py-2 font-sans text-[0.6rem] uppercase tracking-[0.16em] ${
+            className={`min-h-11 rounded-full px-4 py-2.5 font-sans text-[0.65rem] uppercase tracking-[0.14em] sm:min-h-0 sm:text-[0.6rem] sm:tracking-[0.16em] ${
               tab === item ? "bg-forest text-ivory" : "bg-cream"
             }`}
           >
@@ -405,19 +405,48 @@ function VisitsBoard() {
   );
 }
 
+function inviteHeadcount(invite: InviteRecord) {
+  return householdNames(invite).length;
+}
+
+function inviteStatus(invite: InviteRecord) {
+  if (invite.invited === false) {
+    return { label: "Uninvited · entered", className: "bg-[#C45C4A]/15 text-[#C45C4A]" };
+  }
+  if (invite.entered) {
+    return { label: "Invited · entered", className: "bg-forest/10 text-forest" };
+  }
+  return { label: "Invited", className: "bg-cream text-taupe" };
+}
+
 function InviteManager() {
   const { state, upsertInvite, deleteInvite, importInvites, setInviteCanEditSite } = useHub();
   const [editing, setEditing] = useState<InviteRecord | null>(null);
+  const households = state.invites.length;
+  const guests = state.invites.reduce((sum, invite) => sum + inviteHeadcount(invite), 0);
 
   return (
-    <div className="space-y-8">
-      <div className="soft-card p-6">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="soft-card px-4 py-5 sm:p-6">
+          <p className="label-caps text-olive">Guests</p>
+          <p className="mt-2 font-serif text-4xl leading-none sm:text-5xl">{guests}</p>
+          <p className="mt-2 font-sans text-sm text-charcoal/65">Including plus-ones</p>
+        </div>
+        <div className="soft-card px-4 py-5 sm:p-6">
+          <p className="label-caps text-taupe">Households</p>
+          <p className="mt-2 font-serif text-4xl leading-none sm:text-5xl">{households}</p>
+          <p className="mt-2 font-sans text-sm text-charcoal/65">Invite records</p>
+        </div>
+      </div>
+
+      <div className="soft-card p-5 sm:p-6">
         <h2 className="font-serif text-2xl uppercase">Upload or update guests</h2>
         <p className="mt-2 max-w-2xl font-sans text-sm text-charcoal/70">
-          CSV columns: firstName, lastName, email, location, inItaly (true/false), party (names separated by comma), events, tags.
+          CSV columns: firstName, lastName, email, phone, location, inItaly (true/false), party (names separated by comma), events, tags.
           Location determines RSVP travel questions — Italy guests won&apos;t be asked for arrival times.
         </p>
-        <label className="btn-secondary mt-4 inline-flex cursor-pointer">
+        <label className="btn-secondary mt-4 inline-flex min-h-11 cursor-pointer">
           Upload CSV
           <input
             type="file"
@@ -444,66 +473,87 @@ function InviteManager() {
         onCancel={() => setEditing(null)}
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-taupe/15">
-        <table className="min-w-full text-left font-sans text-sm">
-          <thead className="bg-cream text-[0.6rem] uppercase tracking-[0.16em] text-taupe">
-            <tr>
-              <th className="px-4 py-3">Guest</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Location</th>
-              <th className="px-4 py-3">Italy?</th>
-              <th className="px-4 py-3">Party</th>
-              <th className="px-4 py-3">Tags</th>
-              <th className="px-4 py-3">Edit site</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.invites.map((invite) => (
-              <tr key={invite.id} className="border-t border-taupe/10">
-                <td className="px-4 py-3">{invite.firstName} {invite.lastName}</td>
-                <td className="px-4 py-3">{invite.email || "—"}</td>
-                <td className="px-4 py-3">
-                  {invite.invited === false ? (
-                    <span className="rounded-full bg-[#C45C4A]/15 px-2 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] text-[#C45C4A]">
-                      Uninvited · entered
-                    </span>
-                  ) : invite.entered ? (
-                    <span className="rounded-full bg-forest/10 px-2 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] text-forest">
-                      Invited · entered
-                    </span>
-                  ) : (
-                    <span className="text-taupe">Invited</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">{invite.location}</td>
-                <td className="px-4 py-3">{invite.inItaly ? "Yes" : "No"}</td>
-                <td className="px-4 py-3">{householdNames(invite).join(", ")}</td>
-                <td className="px-4 py-3 text-taupe">{inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}</td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    className={`rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${
-                      invite.canEditSite ? "bg-forest text-ivory" : "bg-cream text-taupe"
-                    }`}
-                    onClick={() => setInviteCanEditSite(invite.id, !invite.canEditSite)}
-                  >
-                    {invite.canEditSite ? "Editor" : "Off"}
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button type="button" className="mr-3 font-sans text-xs uppercase tracking-widest text-olive" onClick={() => setEditing(invite)}>
-                    Edit
-                  </button>
-                  <button type="button" className="font-sans text-xs uppercase tracking-widest text-taupe" onClick={() => deleteInvite(invite.id)}>
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-3">
+        <h2 className="font-serif text-xl uppercase">Guest list</h2>
+        {state.invites.length === 0 ? (
+          <p className="soft-card p-5 font-sans text-sm text-taupe">No guests yet. Add one above.</p>
+        ) : null}
+        {state.invites.map((invite) => {
+          const count = inviteHeadcount(invite);
+          const status = inviteStatus(invite);
+          const phone = invite.phone?.trim() ?? "";
+          return (
+            <article key={invite.id} className="soft-card p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-serif text-xl leading-tight">
+                    {invite.firstName} {invite.lastName}
+                  </h3>
+                  <p className="mt-1 font-sans text-sm text-charcoal/70">
+                    {count} {count === 1 ? "guest" : "guests"}
+                    {invite.party.length ? ` · ${invite.party.join(", ")}` : ""}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 font-sans text-[0.58rem] uppercase tracking-[0.12em] ${status.className}`}>
+                  {status.label}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2 font-sans text-base text-charcoal">
+                {phone ? (
+                  <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="flex min-h-11 items-center text-forest underline-offset-2 hover:underline">
+                    {phone}
+                  </a>
+                ) : (
+                  <p className="text-taupe">No phone yet</p>
+                )}
+                {invite.email ? (
+                  <a href={`mailto:${invite.email}`} className="block break-all text-sm text-charcoal/75">
+                    {invite.email}
+                  </a>
+                ) : (
+                  <p className="text-sm text-taupe">No email</p>
+                )}
+                <p className="text-sm text-charcoal/70">
+                  {invite.location || "Location TBD"}
+                  {invite.inItaly ? " · Italy" : ""}
+                </p>
+                <p className="text-sm text-taupe">
+                  {inviteTags(invite, state).map((id) => tagLabel(id, state)).join(" · ") || "No tags"}
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`min-h-11 rounded-full px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] ${
+                    invite.canEditSite ? "bg-forest text-ivory" : "bg-cream text-taupe"
+                  }`}
+                  onClick={() => setInviteCanEditSite(invite.id, !invite.canEditSite)}
+                >
+                  {invite.canEditSite ? "Editor" : "Edit site off"}
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-full bg-cream px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] text-olive"
+                  onClick={() => {
+                    setEditing(invite);
+                    document.getElementById("invite-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-full bg-cream px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] text-taupe"
+                  onClick={() => deleteInvite(invite.id)}
+                >
+                  Remove
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
@@ -526,7 +576,8 @@ function InviteForm({
 
   return (
     <form
-      className="soft-card grid gap-4 p-6 md:grid-cols-2"
+      id="invite-form"
+      className="soft-card grid gap-4 p-5 sm:p-6 md:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -538,6 +589,7 @@ function InviteForm({
           firstName,
           lastName,
           email: String(data.get("email")),
+          phone: String(data.get("phone")).trim(),
           location,
           inItaly: inItaly || /italy/i.test(location),
           party: String(data.get("party"))
@@ -569,18 +621,30 @@ function InviteForm({
       </label>
       <label>
         <span className="label-caps">Email</span>
-        <input name="email" type="email" defaultValue={initial?.email} className="input-line" />
+        <input name="email" type="email" defaultValue={initial?.email} className="input-line" inputMode="email" autoComplete="email" />
       </label>
       <label>
+        <span className="label-caps">Phone</span>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          defaultValue={initial?.phone ?? ""}
+          placeholder="917-555-0100"
+          className="input-line"
+        />
+      </label>
+      <label className="md:col-span-2">
         <span className="label-caps">Location</span>
         <input name="location" defaultValue={initial?.location} placeholder="New York, NY or Rome, Italy" className="input-line" />
       </label>
-      <label className="flex items-center gap-3 font-sans text-sm md:col-span-2">
-        <input type="checkbox" checked={inItaly} onChange={(event) => setInItaly(event.target.checked)} />
+      <label className="flex min-h-11 items-center gap-3 font-sans text-sm md:col-span-2">
+        <input type="checkbox" className="h-5 w-5" checked={inItaly} onChange={(event) => setInItaly(event.target.checked)} />
         Lives in Italy (hide arrival / departure times at RSVP)
       </label>
-      <label className="flex items-center gap-3 font-sans text-sm md:col-span-2">
-        <input type="checkbox" checked={canEditSite} onChange={(event) => setCanEditSite(event.target.checked)} />
+      <label className="flex min-h-11 items-center gap-3 font-sans text-sm md:col-span-2">
+        <input type="checkbox" className="h-5 w-5" checked={canEditSite} onChange={(event) => setCanEditSite(event.target.checked)} />
         Can edit the website (Edit / Save on any page)
       </label>
       <label className="md:col-span-2">
@@ -596,7 +660,7 @@ function InviteForm({
               <button
                 key={tag.id}
                 type="button"
-                className={`rounded-full px-3 py-1.5 font-sans text-[0.55rem] uppercase tracking-[0.14em] ${
+                className={`min-h-11 rounded-full px-4 font-sans text-[0.58rem] uppercase tracking-[0.14em] ${
                   on ? "bg-forest text-ivory" : "bg-cream"
                 }`}
                 onClick={() => setTags(on ? tags.filter((item) => item !== tag.id) : [...tags, tag.id])}
@@ -608,10 +672,10 @@ function InviteForm({
         </div>
       </fieldset>
       <input type="hidden" name="events" defaultValue={(initial?.events ?? ["welcome", "ceremony", "reception", "brunch"]).join(",")} />
-      <div className="flex gap-3 md:col-span-2">
-        <button type="submit" className="btn-primary">{initial ? "Save guest" : "Add guest"}</button>
+      <div className="flex flex-col gap-3 sm:flex-row md:col-span-2">
+        <button type="submit" className="btn-primary min-h-12 w-full sm:w-auto">{initial ? "Save guest" : "Add guest"}</button>
         {initial ? (
-          <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button type="button" className="btn-secondary min-h-12 w-full sm:w-auto" onClick={onCancel}>Cancel</button>
         ) : null}
       </div>
     </form>

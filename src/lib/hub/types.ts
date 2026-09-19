@@ -152,6 +152,7 @@ export type InviteRecord = {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   location: string;
   inItaly: boolean;
   party: string[];
