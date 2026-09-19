@@ -473,87 +473,95 @@ function InviteManager() {
         onCancel={() => setEditing(null)}
       />
 
-      <div className="space-y-3">
+      <div>
         <h2 className="font-serif text-xl uppercase">Guest list</h2>
         {state.invites.length === 0 ? (
-          <p className="soft-card p-5 font-sans text-sm text-taupe">No guests yet. Add one above.</p>
-        ) : null}
-        {state.invites.map((invite) => {
-          const count = inviteHeadcount(invite);
-          const status = inviteStatus(invite);
-          const phone = invite.phone?.trim() ?? "";
-          return (
-            <article key={invite.id} className="soft-card p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="font-serif text-xl leading-tight">
-                    {invite.firstName} {invite.lastName}
-                  </h3>
-                  <p className="mt-1 font-sans text-sm text-charcoal/70">
-                    {count} {count === 1 ? "guest" : "guests"}
-                    {invite.party.length ? ` · ${invite.party.join(", ")}` : ""}
-                  </p>
-                </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 font-sans text-[0.58rem] uppercase tracking-[0.12em] ${status.className}`}>
-                  {status.label}
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-2 font-sans text-base text-charcoal">
-                {phone ? (
-                  <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="flex min-h-11 items-center text-forest underline-offset-2 hover:underline">
-                    {phone}
-                  </a>
-                ) : (
-                  <p className="text-taupe">No phone yet</p>
-                )}
-                {invite.email ? (
-                  <a href={`mailto:${invite.email}`} className="block break-all text-sm text-charcoal/75">
-                    {invite.email}
-                  </a>
-                ) : (
-                  <p className="text-sm text-taupe">No email</p>
-                )}
-                <p className="text-sm text-charcoal/70">
-                  {invite.location || "Location TBD"}
-                  {invite.inItaly ? " · Italy" : ""}
-                </p>
-                <p className="text-sm text-taupe">
-                  {inviteTags(invite, state).map((id) => tagLabel(id, state)).join(" · ") || "No tags"}
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={`min-h-11 rounded-full px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] ${
-                    invite.canEditSite ? "bg-forest text-ivory" : "bg-cream text-taupe"
-                  }`}
-                  onClick={() => setInviteCanEditSite(invite.id, !invite.canEditSite)}
-                >
-                  {invite.canEditSite ? "Editor" : "Edit site off"}
-                </button>
-                <button
-                  type="button"
-                  className="min-h-11 rounded-full bg-cream px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] text-olive"
-                  onClick={() => {
-                    setEditing(invite);
-                    document.getElementById("invite-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="min-h-11 rounded-full bg-cream px-4 font-sans text-[0.58rem] uppercase tracking-[0.12em] text-taupe"
-                  onClick={() => deleteInvite(invite.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            </article>
-          );
-        })}
+          <p className="soft-card mt-3 p-5 font-sans text-sm text-taupe">No guests yet. Add one above.</p>
+        ) : (
+          <div className="-mx-4 mt-3 overflow-x-auto sm:mx-0 sm:rounded-2xl sm:border sm:border-taupe/15">
+            <table className="min-w-[860px] w-full text-left font-sans text-sm">
+              <thead className="bg-cream text-[0.6rem] uppercase tracking-[0.16em] text-taupe">
+                <tr>
+                  <th className="sticky left-0 bg-cream px-4 py-3">Guest</th>
+                  <th className="px-4 py-3">#</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Italy?</th>
+                  <th className="px-4 py-3">Party</th>
+                  <th className="px-4 py-3">Tags</th>
+                  <th className="px-4 py-3">Edit site</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {state.invites.map((invite) => {
+                  const count = inviteHeadcount(invite);
+                  const status = inviteStatus(invite);
+                  const phone = invite.phone?.trim() ?? "";
+                  return (
+                    <tr key={invite.id} className="border-t border-taupe/10">
+                      <td className="sticky left-0 bg-ivory px-4 py-3 font-medium">
+                        {invite.firstName} {invite.lastName}
+                      </td>
+                      <td className="px-4 py-3">{count}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {phone ? (
+                          <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="text-forest underline-offset-2 hover:underline">
+                            {phone}
+                          </a>
+                        ) : (
+                          <span className="text-taupe">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{invite.email || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{invite.location || "—"}</td>
+                      <td className="px-4 py-3">{invite.inItaly ? "Yes" : "No"}</td>
+                      <td className="px-4 py-3">{invite.party.length ? invite.party.join(", ") : "—"}</td>
+                      <td className="px-4 py-3 text-taupe">{inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          className={`min-h-10 rounded-full px-3 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${
+                            invite.canEditSite ? "bg-forest text-ivory" : "bg-cream text-taupe"
+                          }`}
+                          onClick={() => setInviteCanEditSite(invite.id, !invite.canEditSite)}
+                        >
+                          {invite.canEditSite ? "Editor" : "Off"}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          className="mr-3 min-h-10 font-sans text-xs uppercase tracking-widest text-olive"
+                          onClick={() => {
+                            setEditing(invite);
+                            document.getElementById("invite-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="min-h-10 font-sans text-xs uppercase tracking-widest text-taupe"
+                          onClick={() => deleteInvite(invite.id)}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
