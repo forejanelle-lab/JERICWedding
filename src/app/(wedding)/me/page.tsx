@@ -13,7 +13,7 @@ import { requestRideDigestUnsubscribe } from "@/lib/rides/client";
 const STAY_AREAS = Object.keys(STAY_LABELS) as StayArea[];
 
 export default function DashboardPage() {
-  const { state, me, signOut, updateVisibility, updateStay } = useHub();
+  const { state, me, signOut, updateStay } = useHub();
   const { t, locale } = useI18n();
 
   if (!state.identity || !me) {
@@ -131,30 +131,6 @@ export default function DashboardPage() {
             <Link href="/leaderboard" className="mt-4 inline-block font-sans text-[0.65rem] uppercase tracking-[0.18em] text-olive">
               {t("me.leaderboard")}
             </Link>
-          </article>
-
-          <article className="soft-card p-6">
-            <p className="label-caps">{t("me.visibility")}</p>
-            <div className="mt-4 space-y-3">
-              {(
-                [
-                  ["showInDirectory", "me.showDirectory"],
-                  ["showCity", "me.showCity"],
-                  ["showEvents", "me.showEvents"],
-                  ["allowContact", "me.allowContact"],
-                  ["showOnLeaderboard", "me.showLeaderboard"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="flex items-center justify-between gap-4 font-sans text-sm">
-                  {t(label)}
-                  <input
-                    type="checkbox"
-                    checked={me.visibility[key]}
-                    onChange={(event) => updateVisibility({ [key]: event.target.checked })}
-                  />
-                </label>
-              ))}
-            </div>
           </article>
         </div>
         <div className="mt-10 space-y-3 text-center">

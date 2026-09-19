@@ -40,7 +40,7 @@ export default function LeaderboardPage() {
           editId="leaderboard"
           eyebrow="Playful, not precious"
           title="Wedding Leaderboard"
-          description="Winners revealed after the wedding. Hide your name anytime from My Weekend."
+          description="Winners revealed after the wedding."
         />
         <div className="mx-auto mt-10 flex max-w-2xl flex-wrap justify-center gap-2">
           {CATS.map((item) => (

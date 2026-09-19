@@ -57,6 +57,13 @@ export const metadata: Metadata = {
   title: "Janelle & Eric | September 4–6, 2027 · Campania, Italy",
   description:
     "A wedding weekend in Campania — story, travel, community, and celebration for Janelle & Eric.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
   openGraph: {
     title: "Janelle & Eric",
     description: "September 4–6, 2027 · Campania, Italy",

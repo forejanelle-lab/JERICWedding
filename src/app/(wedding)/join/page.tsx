@@ -38,7 +38,7 @@ function JoinForm() {
           <PageHeader
             eyebrow="You're in"
             title={`Welcome, ${state.identity.firstName}`}
-            description="The community is yours. Set visibility anytime from My Weekend."
+            description="The community is yours. Your weekend is waiting."
           />
           <div className="mt-10 flex justify-center">
             <button type="button" className="btn-primary" onClick={() => router.push(next)}>
