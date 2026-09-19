@@ -3,19 +3,16 @@
 import { useEffect, useState } from "react";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
 import { EditText } from "@/components/site/EditText";
-import { SONG_CATEGORIES } from "@/lib/hub/content";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
-import type { SongCategory } from "@/lib/hub/types";
 
 export default function SongsPage() {
   const { state, voteSong, suggestSong } = useHub();
   const { t } = useI18n();
-  const [category, setCategory] = useState<SongCategory | "all">("all");
   const [voterId, setVoterId] = useState("");
   const [notice, setNotice] = useState("");
   const songs = state.songs
-    .filter((song) => song.approved && (category === "all" || song.category === category))
+    .filter((song) => song.approved)
     .sort((a, b) => b.ups.length - b.downs.length - (a.ups.length - a.downs.length));
 
   useEffect(() => {
@@ -66,7 +63,6 @@ export default function SongsPage() {
               suggestSong(
                 String(data.get("title")),
                 String(data.get("artist")),
-                String(data.get("category")) as SongCategory,
                 String(data.get("by") || ""),
               );
               event.currentTarget.reset();
@@ -77,11 +73,6 @@ export default function SongsPage() {
             </EditText>
             <input name="title" required placeholder={t("songs.title")} className="input-line" />
             <input name="artist" required placeholder={t("songs.artist")} className="input-line" />
-            <select name="category" className="input-line" defaultValue="classics">
-              {SONG_CATEGORIES.map((item) => (
-                <option key={item.id} value={item.id}>{t(`song.${item.id}`)}</option>
-              ))}
-            </select>
             <input name="by" placeholder={t("songs.yourName")} className="input-line" />
             <button type="submit" className="btn-primary">
               {t("songs.addSong")}
@@ -89,29 +80,15 @@ export default function SongsPage() {
           </form>
 
           <div>
-            <div className="flex flex-wrap gap-2">
-              {[{ id: "all" as const, label: t("songs.all") }, ...SONG_CATEGORIES.map((item) => ({ ...item, label: t(`song.${item.id}`) }))].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setCategory(item.id)}
-                  className={`rounded-full px-4 py-2 font-sans text-[0.6rem] uppercase tracking-[0.16em] ${
-                    category === item.id ? "bg-forest text-ivory" : "bg-cream"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            {notice ? <p className="mt-4 font-sans text-sm text-olive">{notice}</p> : null}
-            <ol className="mt-5 space-y-3">
+            {notice ? <p className="mb-5 font-sans text-sm text-olive">{notice}</p> : null}
+            <ol className="space-y-3">
               {songs.map((song, index) => {
                 const mineUp = voterId ? song.ups.includes(voterId) : false;
                 const mineDown = voterId ? song.downs.includes(voterId) : false;
                 return (
                   <li key={song.id} className="soft-card flex items-center justify-between gap-4 px-5 py-4">
                     <div>
-                      <p className="font-sans text-xs text-olive">#{index + 1} · {song.category}</p>
+                      <p className="font-sans text-xs text-olive">#{index + 1}</p>
                       <p className="font-serif text-xl">{song.title}</p>
                       <p className="font-sans text-sm text-taupe">{song.artist} · {song.suggestedBy}</p>
                     </div>

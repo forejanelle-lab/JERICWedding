@@ -32,7 +32,6 @@ import type {
   SeatAsk,
   Side,
   Song,
-  SongCategory,
   StayArea,
   Visibility,
 } from "@/lib/hub/types";
@@ -215,7 +214,7 @@ type HubContextValue = {
   postGuestbook: (body: string, photoDataUrl?: string) => void;
   heartGuestbook: (id: string) => void;
   voteSong: (id: string, direction: "up" | "down", voterId: string) => void;
-  suggestSong: (title: string, artist: string, category: SongCategory, suggestedBy?: string) => void;
+  suggestSong: (title: string, artist: string, suggestedBy?: string) => void;
   moderateSong: (id: string, approved: boolean) => void;
   upsertInvite: (invite: InviteRecord) => void;
   deleteInvite: (id: string) => void;
@@ -776,13 +775,13 @@ export function HubProvider({
     }));
   }, []);
 
-  const suggestSong = useCallback((title: string, artist: string, category: SongCategory, suggestedBy?: string) => {
+  const suggestSong = useCallback((title: string, artist: string, suggestedBy?: string) => {
     setState((prev) => {
       const song: Song = {
         id: uid("song"),
         title: title.trim(),
         artist: artist.trim(),
-        category,
+        category: "classics",
         suggestedBy:
           suggestedBy?.trim() ||
           (prev.identity
