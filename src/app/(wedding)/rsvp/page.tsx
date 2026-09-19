@@ -175,7 +175,7 @@ export default function RsvpPage() {
                     </p>
                     <p className="mt-1 font-sans text-sm text-charcoal/65">
                       {record.location}
-                      {record.inItaly ? ` · ${t("rsvp.italyGuest")}` : ` · ${t("rsvp.travelingIn")}`}
+                      {record.inItaly ? ` · ${t("rsvp.italyGuest")}` : ""}
                       {record.party.length ? ` · ${t("rsvp.partyOf", { n: record.party.length + 1 })}` : ""}
                     </p>
                     {record.party.length ? (

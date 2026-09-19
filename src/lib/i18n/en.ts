@@ -116,7 +116,6 @@ export const en: Record<string, string> = {
   "rsvp.noMatch": "We don't see that name yet. Check spelling, or continue as a new reply.",
   "rsvp.continueWithout": "Continue without a match",
   "rsvp.italyGuest": "Italy guest",
-  "rsvp.travelingIn": "traveling in",
   "rsvp.partyOf": "party of {n}",
   "rsvp.with": "With {names}",
   "rsvp.yes": "Yes",

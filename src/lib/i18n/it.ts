@@ -304,7 +304,6 @@ export const it: Record<string, string> = {
   "rsvp.noMatch": "Non troviamo ancora quel nome. Controlla l'ortografia, oppure continua come nuova risposta.",
   "rsvp.continueWithout": "Continua senza corrispondenza",
   "rsvp.italyGuest": "ospite in Italia",
-  "rsvp.travelingIn": "in viaggio",
   "rsvp.partyOf": "comitiva di {n}",
   "rsvp.with": "Con {names}",
   "rsvp.yes": "Sì",
