@@ -152,7 +152,11 @@ export function lookupInvites(invites: InviteRecord[], query: string) {
   if (q.length < 2) return [];
   return invites.filter((invite) => {
     const names = householdNames(invite).map((name) => name.toLowerCase());
-    return names.some((name) => name.includes(q) || q.includes(name));
+    return names.some((name) => {
+      if (name.includes(q)) return true;
+      const parts = name.split(/\s+/).filter(Boolean);
+      return parts.length >= 2 && q.includes(name);
+    });
   });
 }
 

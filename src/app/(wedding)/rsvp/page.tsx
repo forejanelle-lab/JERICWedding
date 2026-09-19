@@ -14,6 +14,10 @@ function hasEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function namePartsFromQuery(query: string) {
+  return query.trim().split(/\s+/).filter(Boolean);
+}
+
 export default function RsvpPage() {
   const { submitRsvp, state } = useHub();
   const { t, locale } = useI18n();
@@ -63,6 +67,8 @@ export default function RsvpPage() {
     "confirm",
   ];
   const currentKey = stepKeys[step] ?? "confirm";
+  const unmatchedName = namePartsFromQuery(query);
+  const canContinueWithoutMatch = unmatchedName.length > 0;
 
   function eventLabel(event: EventId) {
     return t(`event.${event}`);
@@ -191,10 +197,11 @@ export default function RsvpPage() {
               ) : null}
               <button
                 type="button"
-                className="btn-secondary mt-6"
-                disabled={query.trim().split(" ").length < 2}
+                className={`mt-6 w-full disabled:opacity-40 ${matches.length === 0 && canContinueWithoutMatch ? "btn-primary" : "btn-secondary"}`}
+                disabled={!canContinueWithoutMatch}
                 onClick={() => {
-                  const [first, ...rest] = query.trim().split(" ");
+                  const [first, ...rest] = unmatchedName;
+                  if (!first) return;
                   selectInvite({
                     id: `new-${Date.now()}`,
                     firstName: first,
