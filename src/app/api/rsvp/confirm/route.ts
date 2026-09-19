@@ -31,14 +31,15 @@ export async function POST(request: Request) {
     fullName,
   });
 
-  if (!result.synced || !result.sent) {
+  if (!result.synced || !result.sent || !result.notified) {
     console.error("rsvp Brevo confirm failed:", result.error);
   }
 
   return NextResponse.json({
-    ok: result.synced && result.sent,
+    ok: result.synced && result.sent && result.notified,
     synced: result.synced,
     sent: result.sent,
+    notified: result.notified,
     error: result.error ?? null,
   });
 }

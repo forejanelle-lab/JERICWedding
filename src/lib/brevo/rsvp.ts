@@ -3,6 +3,7 @@ const RSVP_LIST_NAME = "Website RSVPs";
 const YES_CAMPAIGN = "RSVP Yes Confirmation";
 const NO_CAMPAIGN = "RSVP No Confirmation";
 const SENDER_FALLBACK = { name: "JERIC Wedding", email: "janellefore98@gmail.com" };
+const RSVP_NOTIFY_EMAIL = "emperorpenguin0522@gmail.com";
 
 export type RsvpBrevoInput = {
   attending: boolean;
@@ -37,6 +38,14 @@ function splitName(fullName?: string, firstName?: string, lastName?: string) {
   if (parts.length === 0) return { firstName: "", lastName: "" };
   if (parts.length === 1) return { firstName: parts[0], lastName: "" };
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function substituteContactFields(html: string, fields: { FIRSTNAME: string; LASTNAME: string; EMAIL: string }) {
@@ -177,26 +186,76 @@ async function sendRsvpConfirmation(input: RsvpBrevoInput & { firstName: string;
   return { sent: false as const, error: sent.text || "Brevo confirmation email failed" };
 }
 
+async function sendRsvpNotify(input: {
+  displayName: string;
+  attending: boolean;
+  email: string;
+}) {
+  const answer = input.attending ? "Yes" : "No";
+  const name = input.displayName.trim() || "Guest";
+  const htmlContent = `<!doctype html>
+<html><body style="margin:0;background:#F9F7F2;font-family:Georgia,serif">
+  <div style="max-width:560px;margin:0 auto;padding:32px 24px;color:#242424">
+    <p style="font-size:16px;line-height:1.5;margin:0 0 12px"><strong>${escapeHtml(name)}</strong> RSVP'd ${answer}.</p>
+    ${input.email ? `<p style="font-size:15px;line-height:1.5;margin:0;color:#77736C">${escapeHtml(input.email)}</p>` : ""}
+  </div>
+</body></html>`;
+
+  const sent = await brevoFetch("/smtp/email", {
+    method: "POST",
+    body: JSON.stringify({
+      sender: SENDER_FALLBACK,
+      to: [{ email: RSVP_NOTIFY_EMAIL }],
+      subject: `${name} RSVP'd`,
+      htmlContent,
+      tags: ["rsvp-notify"],
+    }),
+  });
+
+  if (sent.ok) return { sent: true as const };
+  return { sent: false as const, error: sent.text || "Brevo RSVP notify email failed" };
+}
+
 export async function syncRsvpToBrevo(input: RsvpBrevoInput) {
   if (!apiKey()) {
-    return { synced: false, sent: false, error: "BREVO_API_KEY is not configured" };
+    return { synced: false, sent: false, notified: false, error: "BREVO_API_KEY is not configured" };
   }
 
   const email = input.email.trim().toLowerCase();
+  const { firstName, lastName } = splitName(input.fullName, input.firstName, input.lastName);
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || input.fullName?.trim() || "Guest";
+
+  const notify = await sendRsvpNotify({
+    displayName,
+    attending: input.attending,
+    email,
+  });
+
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { synced: false, sent: false, error: "A valid email is required." };
+    return {
+      synced: false,
+      sent: false,
+      notified: notify.sent,
+      error: notify.error || "A valid email is required.",
+    };
   }
 
-  const { firstName, lastName } = splitName(input.fullName, input.firstName, input.lastName);
   const contact = await upsertRsvpContact({ ...input, email, firstName, lastName });
   if (!contact.synced) {
-    return { synced: false, sent: false, error: contact.error };
+    return {
+      synced: false,
+      sent: false,
+      notified: notify.sent,
+      error: [contact.error, notify.error].filter(Boolean).join(" "),
+    };
   }
 
   const mail = await sendRsvpConfirmation({ ...input, email, firstName, lastName });
+  const error = [mail.error, notify.error].filter(Boolean).join(" ") || undefined;
   return {
     synced: true,
     sent: mail.sent,
-    error: mail.error,
+    notified: notify.sent,
+    error,
   };
 }
