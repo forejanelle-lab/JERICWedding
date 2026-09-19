@@ -422,8 +422,18 @@ function inviteStatus(invite: InviteRecord) {
 function InviteManager() {
   const { state, upsertInvite, deleteInvite, importInvites, setInviteCanEditSite } = useHub();
   const [editing, setEditing] = useState<InviteRecord | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<InviteRecord | null>(null);
   const households = state.invites.length;
   const guests = state.invites.reduce((sum, invite) => sum + inviteHeadcount(invite), 0);
+
+  useEffect(() => {
+    if (!pendingDelete) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setPendingDelete(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingDelete]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -550,7 +560,7 @@ function InviteManager() {
                         <button
                           type="button"
                           className="min-h-10 font-sans text-xs uppercase tracking-widest text-taupe"
-                          onClick={() => deleteInvite(invite.id)}
+                          onClick={() => setPendingDelete(invite)}
                         >
                           Remove
                         </button>
@@ -563,6 +573,53 @@ function InviteManager() {
           </div>
         )}
       </div>
+
+      {pendingDelete ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-[#242424]/45 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-invite-title"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-ivory p-5 shadow-[0_16px_40px_rgba(47,58,46,0.18)] sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="label-caps text-olive">Remove guest</p>
+            <h3 id="delete-invite-title" className="mt-2 font-serif text-2xl uppercase">
+              Delete {pendingDelete.firstName} {pendingDelete.lastName}?
+            </h3>
+            <p className="mt-3 font-sans text-sm leading-relaxed text-charcoal/70">
+              This takes them off the invite list
+              {pendingDelete.party.length
+                ? `, including ${pendingDelete.party.join(", ")}`
+                : ""}
+              . You can add them again later if you need to.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+              <button
+                type="button"
+                className="btn-primary min-h-12 w-full sm:w-auto"
+                onClick={() => {
+                  deleteInvite(pendingDelete.id);
+                  if (editing?.id === pendingDelete.id) setEditing(null);
+                  setPendingDelete(null);
+                }}
+              >
+                Yes, remove
+              </button>
+              <button
+                type="button"
+                className="btn-secondary min-h-12 w-full sm:w-auto"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
