@@ -71,7 +71,7 @@ export default function SongsPage() {
             <EditText id="songs.add" as="h2" className="font-serif text-2xl uppercase">
               Add a song
             </EditText>
-            <input name="title" required placeholder={t("songs.title")} className="input-line" />
+            <input name="title" required placeholder={t("songs.titleField")} className="input-line" />
             <input name="artist" required placeholder={t("songs.artist")} className="input-line" />
             <input name="by" placeholder={t("songs.yourName")} className="input-line" />
             <button type="submit" className="btn-primary">

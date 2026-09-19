@@ -19,7 +19,7 @@ function namePartsFromQuery(query: string) {
 }
 
 export default function RsvpPage() {
-  const { submitRsvp, state } = useHub();
+  const { submitRsvp, suggestSong, state } = useHub();
   const { t, locale } = useI18n();
   function eventsForInvite(record: InviteRecord | null) {
     const tags = inviteTags(record, state);
@@ -45,7 +45,9 @@ export default function RsvpPage() {
     events: ["welcome", "ceremony", "reception", "brunch"] as EventId[],
     guestCount: 1,
     dietary: "",
-    song: "",
+    songTitle: "",
+    songArtist: "",
+    songBy: "",
     airport: "",
     arrivalDate: "",
     arrivalTime: "",
@@ -89,8 +91,44 @@ export default function RsvpPage() {
       guestCount: household.length,
       inviteId: record.id,
       partyAttending: household,
+      songBy: `${record.firstName} ${record.lastName}`.trim(),
     }));
     setStep(1);
+  }
+
+  function rsvpPayload(overrides: Partial<typeof form> & { guestCount: number; events?: EventId[]; partyAttending?: string[] }) {
+    const songTitle = (overrides.songTitle ?? form.songTitle).trim();
+    const songArtist = (overrides.songArtist ?? form.songArtist).trim();
+    const songBy = (overrides.songBy ?? form.songBy).trim() || form.name;
+    return {
+      name: form.name,
+      email: form.email,
+      attending: form.attending,
+      events: overrides.events ?? form.events,
+      guestCount: overrides.guestCount,
+      dietary: form.dietary,
+      song: [songTitle, songArtist].filter(Boolean).join(" — "),
+      airport: form.airport,
+      arrivalDate: form.arrivalDate,
+      arrivalTime: form.arrivalTime,
+      departureDate: form.departureDate,
+      departureTime: form.departureTime,
+      stay: form.stay,
+      inviteId: form.inviteId,
+      partyAttending: overrides.partyAttending ?? form.partyAttending,
+      songTitle,
+      songArtist,
+      songBy,
+    };
+  }
+
+  function finishRsvp(record: ReturnType<typeof rsvpPayload>) {
+    const { songTitle, songArtist, songBy, ...rsvp } = record;
+    submitRsvp(rsvp);
+    if (songTitle && songArtist) {
+      suggestSong(songTitle, songArtist, songBy);
+    }
+    setDone(true);
   }
 
   function next() {
@@ -98,16 +136,11 @@ export default function RsvpPage() {
       if (!hasEmail(form.email)) return;
     }
     if (step === 1 && !form.attending) {
-      submitRsvp({ ...form, events: [], guestCount: 0, partyAttending: [] });
-      setDone(true);
+      finishRsvp(rsvpPayload({ events: [], guestCount: 0, partyAttending: [] }));
       return;
     }
     if (step >= stepKeys.length - 1) {
-      submitRsvp({
-        ...form,
-        guestCount: form.partyAttending.length || form.guestCount,
-      });
-      setDone(true);
+      finishRsvp(rsvpPayload({ guestCount: form.partyAttending.length || form.guestCount }));
       return;
     }
     setStep((value) => value + 1);
@@ -309,10 +342,30 @@ export default function RsvpPage() {
           ) : null}
 
           {currentKey === "song" ? (
-            <label className="block">
-              <span className="label-caps">{t("rsvp.song")}</span>
-              <input className="input-line" value={form.song} onChange={(e) => setForm({ ...form, song: e.target.value })} placeholder={t("rsvp.songPh")} />
-            </label>
+            <div className="space-y-4">
+              <p className="font-sans text-sm text-charcoal/70">{t("rsvp.song")}</p>
+              <input
+                className="input-line"
+                value={form.songTitle}
+                onChange={(event) => setForm({ ...form, songTitle: event.target.value })}
+                placeholder={t("songs.titleField")}
+                autoComplete="off"
+              />
+              <input
+                className="input-line"
+                value={form.songArtist}
+                onChange={(event) => setForm({ ...form, songArtist: event.target.value })}
+                placeholder={t("songs.artist")}
+                autoComplete="off"
+              />
+              <input
+                className="input-line"
+                value={form.songBy}
+                onChange={(event) => setForm({ ...form, songBy: event.target.value })}
+                placeholder={t("songs.yourName")}
+                autoComplete="name"
+              />
+            </div>
           ) : null}
 
           {currentKey === "travel" ? (
@@ -376,6 +429,12 @@ export default function RsvpPage() {
               <div className="flex justify-between"><dt>{t("rsvp.attending")}</dt><dd>{form.attending ? t("rsvp.yes") : t("rsvp.no")}</dd></div>
               <div className="flex justify-between gap-6"><dt>{t("rsvp.party")}</dt><dd className="text-right">{form.partyAttending.join(", ") || form.name}</dd></div>
               <div className="flex justify-between gap-6"><dt>{t("rsvp.events")}</dt><dd className="text-right">{form.events.map((e) => eventLabel(e)).join(", ")}</dd></div>
+              {form.songTitle || form.songArtist ? (
+                <div className="flex justify-between gap-6">
+                  <dt>{t("rsvp.song")}</dt>
+                  <dd className="text-right">{[form.songTitle, form.songArtist].filter(Boolean).join(" — ")}</dd>
+                </div>
+              ) : null}
               {showTravel && form.arrivalDate ? (
                 <div className="flex justify-between gap-6">
                   <dt>{t("rsvp.arrival")}</dt>

@@ -190,6 +190,7 @@ export const en: Record<string, string> = {
   "status.pending": "pending",
 
   "songs.title": "Title",
+  "songs.titleField": "Title",
   "songs.artist": "Artist",
   "songs.yourName": "Your name (optional)",
   "songs.addSong": "Add song",
