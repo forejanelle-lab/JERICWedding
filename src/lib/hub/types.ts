@@ -68,6 +68,7 @@ export type Guest = {
   firstName: string;
   lastName: string;
   email?: string;
+  address?: string;
   city: string;
   side: Side;
   group: GuestGroup;
@@ -159,6 +160,7 @@ export type InviteRecord = {
   email: string;
   phone?: string;
   location: string;
+  address?: string;
   inItaly: boolean;
   party: string[];
   events: EventId[];

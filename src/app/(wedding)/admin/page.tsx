@@ -762,6 +762,7 @@ function InviteManager() {
   const { state, upsertInvite, deleteInvite, importInvites, setInviteCanEditSite } = useHub();
   const [editing, setEditing] = useState<InviteRecord | null>(null);
   const [pendingDelete, setPendingDelete] = useState<InviteRecord | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const households = state.invites.length;
   const guests = state.invites.reduce((sum, invite) => sum + inviteHeadcount(invite), 0);
 
@@ -792,7 +793,7 @@ function InviteManager() {
       <div className="soft-card p-5 sm:p-6">
         <h2 className="font-serif text-2xl uppercase">Upload or update guests</h2>
         <p className="mt-2 max-w-2xl font-sans text-sm text-charcoal/70">
-          CSV columns: firstName, lastName, email, phone, location, inItaly (true/false), party (names separated by comma), events, tags.
+          CSV columns: firstName, lastName, email, phone, address, location, inItaly (true/false), party (names separated by comma), events, tags.
           Location determines RSVP travel questions — Italy guests won&apos;t be asked for arrival times.
         </p>
         <label className="btn-secondary mt-4 inline-flex min-h-11 cursor-pointer">
@@ -827,54 +828,67 @@ function InviteManager() {
         {state.invites.length === 0 ? (
           <p className="soft-card mt-3 p-5 font-sans text-sm text-taupe">No guests yet. Add one above.</p>
         ) : (
-          <div className="-mx-4 mt-3 overflow-x-auto sm:mx-0 sm:rounded-2xl sm:border sm:border-taupe/15">
-            <table className="min-w-[860px] w-full text-left font-sans text-sm">
-              <thead className="bg-cream text-[0.6rem] uppercase tracking-[0.16em] text-taupe">
-                <tr>
-                  <th className="sticky left-0 bg-cream px-4 py-3">Guest</th>
-                  <th className="px-4 py-3">#</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Location</th>
-                  <th className="px-4 py-3">Italy?</th>
-                  <th className="px-4 py-3">Party</th>
-                  <th className="px-4 py-3">Tags</th>
-                  <th className="px-4 py-3">Edit site</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.invites.map((invite) => {
-                  const count = inviteHeadcount(invite);
-                  const status = inviteStatus(invite);
-                  const phone = invite.phone?.trim() ?? "";
-                  return (
-                    <tr key={invite.id} className="border-t border-taupe/10">
-                      <td className="sticky left-0 bg-ivory px-4 py-3 font-medium">
-                        {invite.firstName} {invite.lastName}
-                      </td>
-                      <td className="px-4 py-3">{count}</td>
-                      <td className="whitespace-nowrap px-4 py-3">
+          <ul className="mt-3 divide-y divide-taupe/10 overflow-hidden rounded-2xl border border-taupe/15">
+            {state.invites.map((invite) => {
+              const count = inviteHeadcount(invite);
+              const status = inviteStatus(invite);
+              const phone = invite.phone?.trim() ?? "";
+              const open = openId === invite.id;
+              return (
+                <li key={invite.id} className="bg-ivory">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                    aria-expanded={open}
+                    onClick={() => setOpenId(open ? null : invite.id)}
+                  >
+                    <span className="min-w-0 truncate font-sans text-sm font-medium">
+                      {invite.firstName} {invite.lastName}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="font-sans text-xs text-taupe">{count}</span>
+                      <span className={`rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${status.className}`}>
+                        {status.label}
+                      </span>
+                    </span>
+                  </button>
+                  {open ? (
+                    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
+                      <p className="font-sans text-sm sm:col-span-2">
+                        <span className="label-caps mr-2">Address</span>
+                        {invite.address?.trim() || "—"}
+                      </p>
+                      <p className="font-sans text-sm">
+                        <span className="label-caps mr-2">Phone</span>
                         {phone ? (
                           <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="text-forest underline-offset-2 hover:underline">
                             {phone}
                           </a>
                         ) : (
-                          <span className="text-taupe">—</span>
+                          "—"
                         )}
-                      </td>
-                      <td className="px-4 py-3">{invite.email || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${status.className}`}>
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{invite.location || "—"}</td>
-                      <td className="px-4 py-3">{invite.inItaly ? "Yes" : "No"}</td>
-                      <td className="px-4 py-3">{invite.party?.length ? invite.party.join(", ") : "—"}</td>
-                      <td className="px-4 py-3 text-taupe">{inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}</td>
-                      <td className="px-4 py-3">
+                      </p>
+                      <p className="font-sans text-sm">
+                        <span className="label-caps mr-2">Email</span>
+                        {invite.email || "—"}
+                      </p>
+                      <p className="font-sans text-sm">
+                        <span className="label-caps mr-2">Location</span>
+                        {invite.location || "—"}
+                      </p>
+                      <p className="font-sans text-sm">
+                        <span className="label-caps mr-2">Italy</span>
+                        {invite.inItaly ? "Yes" : "No"}
+                      </p>
+                      <p className="font-sans text-sm sm:col-span-2">
+                        <span className="label-caps mr-2">Party</span>
+                        {invite.party?.length ? invite.party.join(", ") : "—"}
+                      </p>
+                      <p className="font-sans text-sm text-taupe sm:col-span-2">
+                        <span className="label-caps mr-2">Tags</span>
+                        {inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
                         <button
                           type="button"
                           className={`min-h-10 rounded-full px-3 font-sans text-[0.55rem] uppercase tracking-[0.12em] ${
@@ -884,11 +898,9 @@ function InviteManager() {
                         >
                           {invite.canEditSite ? "Editor" : "Off"}
                         </button>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
                         <button
                           type="button"
-                          className="mr-3 min-h-10 font-sans text-xs uppercase tracking-widest text-olive"
+                          className="min-h-10 font-sans text-xs uppercase tracking-widest text-olive"
                           onClick={() => {
                             setEditing(invite);
                             document.getElementById("invite-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -903,13 +915,13 @@ function InviteManager() {
                         >
                           Remove
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
 
@@ -995,6 +1007,7 @@ function InviteForm({
           email: String(data.get("email")),
           phone: String(data.get("phone")).trim(),
           location,
+          address: String(data.get("address")).trim(),
           inItaly: inItaly || /italy/i.test(location),
           party: String(data.get("party"))
             .split(/[;|,]/)
@@ -1038,6 +1051,10 @@ function InviteForm({
           placeholder="917-555-0100"
           className="input-line"
         />
+      </label>
+      <label className="md:col-span-2">
+        <span className="label-caps">Address</span>
+        <input name="address" defaultValue={initial?.address ?? ""} placeholder="Street, city, postal code" className="input-line" autoComplete="street-address" />
       </label>
       <label className="md:col-span-2">
         <span className="label-caps">Location</span>

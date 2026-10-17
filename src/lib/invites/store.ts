@@ -35,6 +35,7 @@ export function normalizeInvite(raw: Partial<InviteRecord> | null | undefined, i
     email: String(raw?.email ?? "").trim(),
     phone: String(raw?.phone ?? "").trim(),
     location: String(raw?.location ?? "").trim(),
+    address: String(raw?.address ?? "").trim(),
     inItaly: Boolean(raw?.inItaly),
     party: Array.isArray(raw?.party) ? raw.party.map((name) => String(name).trim()).filter(Boolean) : [],
     events: events.length ? events : ALL_EVENTS,

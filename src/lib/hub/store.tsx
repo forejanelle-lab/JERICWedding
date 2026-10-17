@@ -200,6 +200,7 @@ type HubContextValue = {
   updateVisibility: (visibility: Partial<Visibility>) => void;
   updateStay: (stay: StayArea | null) => void;
   updateProfile: (patch: Partial<Pick<Guest, "city" | "side" | "events">>) => void;
+  updateMyAddress: (address: string) => void;
   postRide: (input: {
     kind: RideKind;
     from: string;
@@ -331,6 +332,7 @@ export function HubProvider({
             firstName: String(invite.firstName ?? "").trim(),
             lastName: String(invite.lastName ?? "").trim(),
             email: String(invite.email ?? "").trim(),
+            address: String(invite.address ?? "").trim(),
             party: Array.isArray(invite.party) ? invite.party.map((name) => String(name ?? "").trim()).filter(Boolean) : [],
             tags: invite.tags?.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
             invited: invite.invited !== false,
@@ -605,6 +607,56 @@ export function HubProvider({
         ...prev,
         guests: prev.guests.map((guest) =>
           guest.id === prev.identity?.guestId ? { ...guest, stay } : guest,
+        ),
+      };
+    });
+  }, []);
+
+  const updateMyAddress = useCallback((address: string) => {
+    const value = address.trim();
+    setState((prev) => {
+      if (!prev.identity) return prev;
+      const email = prev.identity.email.trim().toLowerCase();
+      const first = prev.identity.firstName.trim().toLowerCase();
+      const last = prev.identity.lastName.trim().toLowerCase();
+      const full = `${first} ${last}`.trim();
+      const samePerson = (invite: InviteRecord) => {
+        if (email && String(invite.email ?? "").trim().toLowerCase() === email) return true;
+        if (
+          String(invite.firstName ?? "").trim().toLowerCase() === first &&
+          String(invite.lastName ?? "").trim().toLowerCase() === last &&
+          first
+        ) {
+          return true;
+        }
+        return Boolean(full && householdNames(invite).some((name) => name.toLowerCase() === full));
+      };
+      const matched = prev.invites.some(samePerson);
+      const invites = matched
+        ? prev.invites.map((invite) => (samePerson(invite) ? { ...invite, address: value } : invite))
+        : [
+              {
+                id: uid("inv"),
+                firstName: prev.identity.firstName,
+                lastName: prev.identity.lastName,
+                email: prev.identity.email,
+                location: "",
+                address: value,
+                inItaly: false,
+                party: [],
+                events: ["welcome", "ceremony", "reception", "brunch"] as EventId[],
+                tags: [...DEFAULT_GUEST_TAGS],
+                invited: true,
+                entered: true,
+              },
+              ...prev.invites,
+            ];
+      void syncSharedInvites(invites);
+      return {
+        ...prev,
+        invites,
+        guests: prev.guests.map((guest) =>
+          guest.id === prev.identity?.guestId ? { ...guest, address: value } : guest,
         ),
       };
     });
@@ -895,7 +947,14 @@ export function HubProvider({
             item.firstName.toLowerCase() === invite.firstName.toLowerCase() &&
             item.lastName.toLowerCase() === invite.lastName.toLowerCase(),
         );
-        if (index >= 0) next[index] = { ...next[index], ...invite, id: next[index].id };
+        if (index >= 0) {
+          next[index] = {
+            ...next[index],
+            ...invite,
+            id: next[index].id,
+            address: invite.address?.trim() || next[index].address,
+          };
+        }
         else next.unshift(invite);
       }
       void syncSiteEditors(editorsFromInvites(next));
@@ -1449,6 +1508,7 @@ export function HubProvider({
       updateVisibility,
       updateStay,
       updateProfile,
+      updateMyAddress,
       postRide,
       updateRide,
       deleteRide,
@@ -1516,6 +1576,7 @@ export function HubProvider({
       updateVisibility,
       updateStay,
       updateProfile,
+      updateMyAddress,
       postRide,
       updateRide,
       deleteRide,

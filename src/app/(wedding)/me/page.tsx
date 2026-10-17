@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
 import { PLACES, STAY_LABELS } from "@/lib/hub/content";
@@ -13,7 +13,7 @@ import { requestRideDigestUnsubscribe } from "@/lib/rides/client";
 const STAY_AREAS = Object.keys(STAY_LABELS) as StayArea[];
 
 export default function DashboardPage() {
-  const { state, me, signOut, updateStay } = useHub();
+  const { state, me, signOut, updateStay, updateMyAddress } = useHub();
   const { t, locale } = useI18n();
 
   if (!state.identity || !me) {
@@ -49,7 +49,11 @@ export default function DashboardPage() {
       </SectionWrap>
 
       <SectionWrap className="bg-cream">
-        <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
+        <AddressEditor
+          savedAddress={me.address || matchingInviteAddress(state.invites, state.identity) || ""}
+          onSave={updateMyAddress}
+        />
+        <div className="mx-auto mt-4 grid max-w-4xl gap-4 md:grid-cols-2">
           <article className="soft-card p-6">
             <p className="label-caps">{t("me.rsvp")}</p>
             <p className="mt-3 font-serif text-2xl">{myRsvp ? (myRsvp.attending ? t("me.confirmed") : t("me.regrets")) : t("me.notSubmitted")}</p>
@@ -141,6 +145,70 @@ export default function DashboardPage() {
         </div>
       </SectionWrap>
     </main>
+  );
+}
+
+function matchingInviteAddress(
+  invites: { email?: string; firstName?: string; lastName?: string; address?: string; party?: string[] }[],
+  identity: { email?: string; firstName?: string; lastName?: string } | null,
+) {
+  if (!identity) return "";
+  const email = identity.email?.trim().toLowerCase() ?? "";
+  const first = identity.firstName?.trim().toLowerCase() ?? "";
+  const last = identity.lastName?.trim().toLowerCase() ?? "";
+  const full = `${first} ${last}`.trim();
+  const match =
+    invites.find((invite) => email && (invite.email ?? "").trim().toLowerCase() === email) ??
+    invites.find(
+      (invite) =>
+        (invite.firstName ?? "").trim().toLowerCase() === first &&
+        (invite.lastName ?? "").trim().toLowerCase() === last &&
+        first,
+    ) ??
+    invites.find((invite) =>
+      (invite.party ?? []).some((name) => name.trim().toLowerCase() === full),
+    );
+  return match?.address?.trim() ?? "";
+}
+
+function AddressEditor({ savedAddress, onSave }: { savedAddress: string; onSave: (address: string) => void }) {
+  const { t } = useI18n();
+  const [address, setAddress] = useState(savedAddress);
+  const [touched, setTouched] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!touched) setAddress(savedAddress);
+  }, [savedAddress, touched]);
+
+  return (
+    <form
+      className="mx-auto flex max-w-4xl flex-col gap-3 rounded-2xl border border-taupe/15 bg-ivory px-4 py-3 sm:flex-row sm:items-end"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(address);
+        setSaved(true);
+        setTouched(false);
+      }}
+    >
+      <label className="block min-w-0 flex-1">
+        <span className="label-caps">{t("me.address")}</span>
+        <input
+          className="input-line"
+          value={address}
+          autoComplete="street-address"
+          placeholder={t("me.addressPh")}
+          onChange={(event) => {
+            setAddress(event.target.value);
+            setTouched(true);
+            setSaved(false);
+          }}
+        />
+      </label>
+      <button type="submit" className="btn-primary min-h-11 shrink-0 px-5">
+        {saved ? t("me.addressSaved") : t("me.saveAddress")}
+      </button>
+    </form>
   );
 }
 
