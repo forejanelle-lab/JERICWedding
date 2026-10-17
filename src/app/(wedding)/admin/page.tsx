@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { setAdminCookie } from "@/lib/gate/admin";
 import { allTagIds, inviteTags, tagCatalog, tagLabel } from "@/lib/hub/access";
-import { ADMIN_CODE, EVENT_LABELS } from "@/lib/hub/content";
+import { ADMIN_CODE, EVENT_LABELS, STAY_LABELS } from "@/lib/hub/content";
 import { AccessTagEditor, GameEditor } from "@/components/site/GameEditor";
+import { PhotoFolderEditor } from "@/components/site/PhotoFolders";
 import { householdNames, useHub } from "@/lib/hub/store";
 import { parseInviteCsv, formatDate, formatTime, relativeTime } from "@/lib/hub/utils";
 import { sendRideDigestNow } from "@/lib/rides/actions";
-import type { EventId, InviteRecord, RsvpRecord } from "@/lib/hub/types";
+import type { EventId, InviteRecord, RsvpRecord, StayArea } from "@/lib/hub/types";
 import type { SiteVisit, VisitorSummary } from "@/lib/visits/types";
 
 type Tab = "invites" | "visits" | "rsvps" | "access" | "rides" | "games" | "songs" | "photos";
@@ -140,17 +141,21 @@ export default function AdminPage() {
         ) : null}
 
         {tab === "photos" ? (
-          <div className="space-y-3">
+          <div className="space-y-10">
+            <PhotoFolderEditor />
+            <div className="space-y-3">
+              <h2 className="font-serif text-2xl uppercase">Pending</h2>
             {pendingPhotos.length === 0 ? <p className="font-sans text-sm text-taupe">No pending photos.</p> : null}
             {pendingPhotos.map((photo) => (
-              <div key={photo.id} className="soft-card flex items-center justify-between p-4">
-                <p className="font-sans text-sm">{photo.caption || "Untitled"} · {photo.album}</p>
+              <div key={photo.id} className="soft-card flex flex-wrap items-center justify-between gap-3 p-4">
+                <p className="font-sans text-sm">{photo.caption || "Untitled"} · {state.photoFolders.find((folder) => folder.id === photo.album)?.label ?? photo.album}</p>
                 <div className="flex gap-2">
                   <button type="button" className="btn-primary !px-3 !py-2" onClick={() => hub.moderatePhoto(photo.id, true)}>Approve</button>
                   <button type="button" className="btn-secondary !px-3 !py-2" onClick={() => hub.moderatePhoto(photo.id, false)}>Reject</button>
                 </div>
               </div>
             ))}
+            </div>
           </div>
         ) : null}
       </div>
@@ -163,14 +168,91 @@ function partySize(rsvp: RsvpRecord) {
   return rsvp.guestCount || (rsvp.attending ? 1 : 0);
 }
 
+function blankRsvp(): RsvpRecord {
+  return {
+    id: "",
+    name: "",
+    email: "",
+    attending: true,
+    events: ["welcome", "ceremony", "reception", "brunch"],
+    guestCount: 1,
+    dietary: "",
+    song: "",
+    airport: "",
+    arrivalDate: "",
+    arrivalTime: "",
+    departureDate: "",
+    departureTime: "",
+    stay: "",
+    inviteId: "",
+    partyAttending: [],
+    submittedAt: "",
+  };
+}
+
+function normalizeAdminRsvp(rsvp: RsvpRecord): RsvpRecord {
+  const named = rsvp.name.trim();
+  const partyAttending = rsvp.attending
+    ? rsvp.partyAttending.map((name) => name.trim()).filter(Boolean)
+    : [];
+  const party = rsvp.attending && partyAttending.length === 0 && named ? [named] : partyAttending;
+  return {
+    ...rsvp,
+    id: rsvp.id || `rsvp-${Date.now().toString(36)}`,
+    name: named,
+    email: rsvp.email.trim(),
+    events: rsvp.attending ? rsvp.events : [],
+    partyAttending: party,
+    guestCount: rsvp.attending ? party.length || rsvp.guestCount || 1 : 0,
+    submittedAt: rsvp.submittedAt || new Date().toISOString(),
+  };
+}
+
 function RsvpBoard({ rsvps }: { rsvps: RsvpRecord[] }) {
+  const { updateRsvp, deleteRsvp } = useHub();
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<RsvpRecord | null>(null);
   const yes = rsvps.filter((rsvp) => rsvp.attending);
   const no = rsvps.filter((rsvp) => !rsvp.attending);
   const yesPeople = yes.reduce((sum, rsvp) => sum + partySize(rsvp), 0);
   const eventIds = Object.keys(EVENT_LABELS) as EventId[];
 
+  useEffect(() => {
+    if (!pendingDelete) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setPendingDelete(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingDelete]);
+
+  function save(rsvp: RsvpRecord) {
+    const next = normalizeAdminRsvp(rsvp);
+    if (!next.name) return;
+    updateRsvp(next);
+    setAdding(false);
+    setEditingId(null);
+  }
+
   return (
     <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <p className="max-w-xl font-sans text-sm text-charcoal/65">
+          Change a reply here without sending another confirmation email. Unmatched names are added to the invite list.
+        </p>
+        <button
+          type="button"
+          className="btn-secondary !min-h-11 !px-4 !py-2"
+          onClick={() => {
+            setAdding(true);
+            setEditingId(null);
+          }}
+        >
+          Add RSVP
+        </button>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="soft-card p-5">
           <p className="label-caps text-olive">Yes</p>
@@ -207,17 +289,100 @@ function RsvpBoard({ rsvps }: { rsvps: RsvpRecord[] }) {
         </div>
       </div>
 
-      {rsvps.length === 0 ? <p className="font-sans text-sm text-taupe">No RSVPs yet.</p> : (
+      {adding ? (
+        <RsvpEditor initial={blankRsvp()} onSave={save} onCancel={() => setAdding(false)} />
+      ) : null}
+
+      {rsvps.length === 0 && !adding ? <p className="font-sans text-sm text-taupe">No RSVPs yet.</p> : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <RsvpColumn title="Yes" items={yes} empty="No yes replies yet." />
-          <RsvpColumn title="No" items={no} empty="No no replies yet." />
+          <RsvpColumn
+            title="Yes"
+            items={yes}
+            empty="No yes replies yet."
+            editingId={editingId}
+            onEdit={setEditingId}
+            onSave={save}
+            onCancel={() => setEditingId(null)}
+            onDelete={setPendingDelete}
+          />
+          <RsvpColumn
+            title="No"
+            items={no}
+            empty="No no replies yet."
+            editingId={editingId}
+            onEdit={setEditingId}
+            onSave={save}
+            onCancel={() => setEditingId(null)}
+            onDelete={setPendingDelete}
+          />
         </div>
       )}
+
+      {pendingDelete ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-[#242424]/45 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-rsvp-title"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-ivory p-5 shadow-[0_16px_40px_rgba(47,58,46,0.18)] sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="label-caps text-olive">Remove RSVP</p>
+            <h3 id="delete-rsvp-title" className="mt-2 font-serif text-2xl uppercase">
+              Delete {pendingDelete.name}&apos;s reply?
+            </h3>
+            <p className="mt-3 font-sans text-sm leading-relaxed text-charcoal/70">
+              This removes the RSVP. Their invite stays on the guest list unless you remove it there too.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+              <button
+                type="button"
+                className="btn-primary min-h-12 w-full sm:w-auto"
+                onClick={() => {
+                  deleteRsvp(pendingDelete.id);
+                  if (editingId === pendingDelete.id) setEditingId(null);
+                  setPendingDelete(null);
+                }}
+              >
+                Yes, remove
+              </button>
+              <button
+                type="button"
+                className="btn-secondary min-h-12 w-full sm:w-auto"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function RsvpColumn({ title, items, empty }: { title: string; items: RsvpRecord[]; empty: string }) {
+function RsvpColumn({
+  title,
+  items,
+  empty,
+  editingId,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+}: {
+  title: string;
+  items: RsvpRecord[];
+  empty: string;
+  editingId: string | null;
+  onEdit: (id: string) => void;
+  onSave: (rsvp: RsvpRecord) => void;
+  onCancel: () => void;
+  onDelete: (rsvp: RsvpRecord) => void;
+}) {
   return (
     <section>
       <h2 className="font-serif text-2xl uppercase">
@@ -225,60 +390,233 @@ function RsvpColumn({ title, items, empty }: { title: string; items: RsvpRecord[
       </h2>
       <div className="mt-4 space-y-3">
         {items.length === 0 ? <p className="font-sans text-sm text-taupe">{empty}</p> : null}
-        {items.map((rsvp) => (
-          <article key={rsvp.id} className="soft-card p-4 font-sans text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <p className="font-serif text-xl">{rsvp.name}</p>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.14em] ${
-                  rsvp.attending ? "bg-forest text-ivory" : "bg-cream text-charcoal/70"
-                }`}
-              >
-                {rsvp.attending ? "Yes" : "No"}
-              </span>
-            </div>
-            <p className="mt-1 text-charcoal/70">
-              {rsvp.partyAttending.join(", ") || `${partySize(rsvp)} ${partySize(rsvp) === 1 ? "guest" : "guests"}`}
-            </p>
-            {rsvp.email ? <p className="mt-1 text-charcoal/65">{rsvp.email}</p> : null}
-            {rsvp.attending ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {(Object.keys(EVENT_LABELS) as EventId[]).map((eventId) => {
-                  const on = rsvp.events.includes(eventId);
-                  return (
-                    <span
-                      key={eventId}
-                      className={`rounded-full px-2.5 py-1 font-sans text-[0.5rem] uppercase tracking-[0.12em] ${
-                        on ? "bg-forest/10 text-forest" : "bg-cream text-taupe line-through"
-                      }`}
-                    >
-                      {EVENT_LABELS[eventId]}
-                    </span>
-                  );
-                })}
+        {items.map((rsvp) =>
+          editingId === rsvp.id ? (
+            <RsvpEditor key={rsvp.id} initial={rsvp} onSave={onSave} onCancel={onCancel} />
+          ) : (
+            <article key={rsvp.id} className="soft-card p-4 font-sans text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-serif text-xl">{rsvp.name}</p>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 font-sans text-[0.55rem] uppercase tracking-[0.14em] ${
+                    rsvp.attending ? "bg-forest text-ivory" : "bg-cream text-charcoal/70"
+                  }`}
+                >
+                  {rsvp.attending ? "Yes" : "No"}
+                </span>
               </div>
-            ) : (
-              <p className="mt-2 text-taupe">Not attending</p>
-            )}
-            {rsvp.arrivalDate ? (
-              <p className="mt-2 text-charcoal/65">
-                Arrive {[formatDate(rsvp.arrivalDate), rsvp.arrivalTime ? formatTime(rsvp.arrivalTime) : "", rsvp.airport]
-                  .filter(Boolean)
-                  .join(" ")}
+              <p className="mt-1 text-charcoal/70">
+                {rsvp.partyAttending.join(", ") || `${partySize(rsvp)} ${partySize(rsvp) === 1 ? "guest" : "guests"}`}
               </p>
-            ) : null}
-            {rsvp.departureDate ? (
-              <p className="text-charcoal/65">
-                Depart {[formatDate(rsvp.departureDate), rsvp.departureTime ? formatTime(rsvp.departureTime) : ""]
-                  .filter(Boolean)
-                  .join(" ")}
-              </p>
-            ) : null}
-            {rsvp.dietary ? <p className="mt-1 text-charcoal/65">{rsvp.dietary}</p> : null}
-          </article>
-        ))}
+              {rsvp.email ? <p className="mt-1 text-charcoal/65">{rsvp.email}</p> : null}
+              {rsvp.attending ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(Object.keys(EVENT_LABELS) as EventId[]).map((eventId) => {
+                    const on = rsvp.events.includes(eventId);
+                    return (
+                      <span
+                        key={eventId}
+                        className={`rounded-full px-2.5 py-1 font-sans text-[0.5rem] uppercase tracking-[0.12em] ${
+                          on ? "bg-forest/10 text-forest" : "bg-cream text-taupe line-through"
+                        }`}
+                      >
+                        {EVENT_LABELS[eventId]}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 text-taupe">Not attending</p>
+              )}
+              {rsvp.arrivalDate ? (
+                <p className="mt-2 text-charcoal/65">
+                  Arrive {[formatDate(rsvp.arrivalDate), rsvp.arrivalTime ? formatTime(rsvp.arrivalTime) : "", rsvp.airport]
+                    .filter(Boolean)
+                    .join(" ")}
+                </p>
+              ) : null}
+              {rsvp.departureDate ? (
+                <p className="text-charcoal/65">
+                  Depart {[formatDate(rsvp.departureDate), rsvp.departureTime ? formatTime(rsvp.departureTime) : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                </p>
+              ) : null}
+              {rsvp.dietary ? <p className="mt-1 text-charcoal/65">{rsvp.dietary}</p> : null}
+              {rsvp.song ? <p className="mt-1 text-charcoal/65">Song: {rsvp.song}</p> : null}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="min-h-10 font-sans text-xs uppercase tracking-widest text-olive"
+                  onClick={() => onEdit(rsvp.id)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="min-h-10 font-sans text-xs uppercase tracking-widest text-taupe"
+                  onClick={() => onDelete(rsvp)}
+                >
+                  Remove
+                </button>
+              </div>
+            </article>
+          ),
+        )}
       </div>
     </section>
+  );
+}
+
+function RsvpEditor({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial: RsvpRecord;
+  onSave: (rsvp: RsvpRecord) => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState(initial);
+  const [partyText, setPartyText] = useState(initial.partyAttending.join(", "));
+  const eventIds = Object.keys(EVENT_LABELS) as EventId[];
+
+  return (
+    <form
+      className="soft-card grid gap-4 p-4 sm:p-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave({
+          ...form,
+          partyAttending: partyText.split(/[;|,]/).map((name) => name.trim()).filter(Boolean),
+        });
+      }}
+    >
+      <h3 className="font-serif text-2xl uppercase">{initial.id ? "Edit RSVP" : "Add RSVP"}</h3>
+      <label>
+        <span className="label-caps">Name</span>
+        <input
+          required
+          className="input-line"
+          value={form.name}
+          onChange={(event) => setForm({ ...form, name: event.target.value })}
+        />
+      </label>
+      <label>
+        <span className="label-caps">Email</span>
+        <input
+          type="email"
+          className="input-line"
+          value={form.email}
+          onChange={(event) => setForm({ ...form, email: event.target.value })}
+        />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[true, false].map((value) => (
+          <button
+            key={String(value)}
+            type="button"
+            onClick={() => setForm({ ...form, attending: value, events: value ? form.events : [] })}
+            className={`rounded-2xl border px-4 py-3 font-serif text-lg uppercase ${
+              form.attending === value ? "border-forest bg-forest text-ivory" : "border-taupe/20"
+            }`}
+          >
+            {value ? "Yes" : "No"}
+          </button>
+        ))}
+      </div>
+      {form.attending ? (
+        <>
+          <fieldset>
+            <legend className="label-caps">Events</legend>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {eventIds.map((eventId) => {
+                const on = form.events.includes(eventId);
+                return (
+                  <button
+                    key={eventId}
+                    type="button"
+                    className={`min-h-11 rounded-full px-4 font-sans text-[0.58rem] uppercase tracking-[0.14em] ${
+                      on ? "bg-forest text-ivory" : "bg-cream text-taupe"
+                    }`}
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        events: on ? form.events.filter((item) => item !== eventId) : [...form.events, eventId],
+                      })
+                    }
+                  >
+                    {EVENT_LABELS[eventId]}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+          <label>
+            <span className="label-caps">Party / plus-ones</span>
+            <input
+              className="input-line"
+              value={partyText}
+              onChange={(event) => setPartyText(event.target.value)}
+              placeholder="Jane Doe, Guest Name"
+            />
+          </label>
+        </>
+      ) : null}
+      <label>
+        <span className="label-caps">Dietary</span>
+        <input className="input-line" value={form.dietary} onChange={(event) => setForm({ ...form, dietary: event.target.value })} />
+      </label>
+      <label>
+        <span className="label-caps">Song</span>
+        <input className="input-line" value={form.song} onChange={(event) => setForm({ ...form, song: event.target.value })} placeholder="Title — Artist" />
+      </label>
+      <label>
+        <span className="label-caps">Airport</span>
+        <input className="input-line" value={form.airport} onChange={(event) => setForm({ ...form, airport: event.target.value })} placeholder="NAP or FCO" />
+      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className="label-caps">Arrival date</span>
+          <input type="date" className="input-line" value={form.arrivalDate} onChange={(event) => setForm({ ...form, arrivalDate: event.target.value })} />
+        </label>
+        <label>
+          <span className="label-caps">Arrival time</span>
+          <input type="time" className="input-line" value={form.arrivalTime} onChange={(event) => setForm({ ...form, arrivalTime: event.target.value })} />
+        </label>
+        <label>
+          <span className="label-caps">Departure date</span>
+          <input type="date" className="input-line" value={form.departureDate} onChange={(event) => setForm({ ...form, departureDate: event.target.value })} />
+        </label>
+        <label>
+          <span className="label-caps">Departure time</span>
+          <input type="time" className="input-line" value={form.departureTime} onChange={(event) => setForm({ ...form, departureTime: event.target.value })} />
+        </label>
+      </div>
+      <label>
+        <span className="label-caps">Stay</span>
+        <select
+          className="input-line"
+          value={form.stay}
+          onChange={(event) => setForm({ ...form, stay: event.target.value as StayArea | "" })}
+        >
+          <option value="">Prefer not to say</option>
+          {(Object.keys(STAY_LABELS) as StayArea[]).map((area) => (
+            <option key={area} value={area}>
+              {STAY_LABELS[area]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex flex-col gap-3 sm:flex-row-reverse">
+        <button type="submit" className="btn-primary min-h-12 w-full sm:w-auto">
+          Save RSVP
+        </button>
+        <button type="button" className="btn-secondary min-h-12 w-full sm:w-auto" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -534,7 +872,7 @@ function InviteManager() {
                       </td>
                       <td className="px-4 py-3">{invite.location || "—"}</td>
                       <td className="px-4 py-3">{invite.inItaly ? "Yes" : "No"}</td>
-                      <td className="px-4 py-3">{invite.party.length ? invite.party.join(", ") : "—"}</td>
+                      <td className="px-4 py-3">{invite.party?.length ? invite.party.join(", ") : "—"}</td>
                       <td className="px-4 py-3 text-taupe">{inviteTags(invite, state).map((id) => tagLabel(id, state)).join(", ")}</td>
                       <td className="px-4 py-3">
                         <button

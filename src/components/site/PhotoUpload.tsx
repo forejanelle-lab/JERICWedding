@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { photoFolderLabel } from "@/lib/hub/albums";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
-import type { PhotoAlbum } from "@/lib/hub/types";
 
 export function PhotoUpload({ next = "/photos" }: { next?: string }) {
   const { state, ready, uploadPhoto } = useHub();
@@ -14,6 +14,10 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
+  const [album, setAlbum] = useState("");
+  const albumId = state.photoFolders.some((folder) => folder.id === album)
+    ? album
+    : (state.photoFolders[0]?.id ?? "");
 
   if (!ready) return null;
 
@@ -45,9 +49,10 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
         setSent(false);
         try {
           const src = await readImageAsCompressedDataUrl(file);
-          uploadPhoto(String(data.get("album")) as PhotoAlbum, String(data.get("caption") ?? "").trim(), src);
+          uploadPhoto(albumId, String(data.get("caption") ?? "").trim(), src);
           setSent(true);
           setFileName("");
+          setAlbum("");
           form.reset();
         } catch {
           setError(t("photos.error"));
@@ -58,12 +63,12 @@ export function PhotoUpload({ next = "/photos" }: { next?: string }) {
     >
       <label className="min-w-[8rem]">
         <span className="label-caps">{t("photos.album")}</span>
-        <select name="album" className="input-line" defaultValue="recent">
-          <option value="recent">{t("photos.recent")}</option>
-          <option value="friday">{t("photos.saturday")}</option>
-          <option value="wedding">{t("photos.weddingDay")}</option>
-          <option value="sunday">{t("photos.monday")}</option>
-          <option value="travel">{t("photos.travel")}</option>
+        <select name="album" className="input-line" value={albumId} onChange={(event) => setAlbum(event.target.value)}>
+          {state.photoFolders.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {photoFolderLabel(folder, t)}
+            </option>
+          ))}
         </select>
       </label>
       <label className="min-w-[12rem] flex-1">

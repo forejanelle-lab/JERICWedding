@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { normalizePhotoFolders } from "@/lib/hub/albums";
 import type { SiteContent } from "@/lib/site-content/types";
 
 const FILE = path.join(process.cwd(), ".data", "site-content.json");
@@ -13,6 +14,7 @@ const EMPTY: SiteContent = {
   siteHidden: [],
   hiddenPages: [],
   heroImage: DEFAULT_HERO,
+  photoFolders: normalizePhotoFolders(undefined),
 };
 
 type GlobalContent = { store?: SiteContent };
@@ -40,6 +42,7 @@ function normalizeStore(raw: unknown): SiteContent {
     siteHidden: Array.isArray(value.siteHidden) ? value.siteHidden.map(String) : [],
     hiddenPages: Array.isArray(value.hiddenPages) ? value.hiddenPages.map(String) : [],
     heroImage: typeof value.heroImage === "string" && value.heroImage ? value.heroImage : DEFAULT_HERO,
+    photoFolders: normalizePhotoFolders(value.photoFolders),
   };
 }
 
@@ -145,8 +148,12 @@ async function toFile(store: SiteContent) {
 
 export async function loadSiteContent(): Promise<SiteContent> {
   const cached = memory().store;
-  if (cached) return cached;
-  const store = (await fromKv()) ?? (await fromSupabase()) ?? (await fromFile()) ?? { ...EMPTY };
+  if (cached) {
+    const normalized = normalizeStore(cached);
+    memory().store = normalized;
+    return normalized;
+  }
+  const store = (await fromKv()) ?? (await fromSupabase()) ?? (await fromFile()) ?? normalizeStore({});
   memory().store = store;
   return store;
 }
@@ -163,7 +170,7 @@ export async function replaceSiteContent(content: SiteContent) {
 }
 
 export async function resetSiteContent() {
-  const next = { ...EMPTY, siteCopy: {}, siteImages: {}, siteHidden: [], hiddenPages: [] };
+  const next = normalizeStore({});
   memory().store = next;
   await saveSiteContent(next);
   return next;

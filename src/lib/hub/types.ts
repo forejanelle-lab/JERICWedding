@@ -37,7 +37,12 @@ export type SongCategory =
   | "classics"
   | "guilty";
 
-export type PhotoAlbum = "recent" | "friday" | "wedding" | "sunday" | "travel";
+export type PhotoAlbum = string;
+
+export type PhotoFolder = {
+  id: string;
+  label: string;
+};
 
 export type PlaceCategory =
   | "beaches"
@@ -275,6 +280,7 @@ export type HubState = {
   guestbook: GuestbookNote[];
   songs: Song[];
   photos: GuestPhoto[];
+  photoFolders: PhotoFolder[];
   announcements: Announcement[];
   rsvps: RsvpRecord[];
   savedPlaces: string[];

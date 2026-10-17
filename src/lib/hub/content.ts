@@ -26,11 +26,14 @@ export const WEDDING = {
 export const ADMIN_CODE = "JERIC-ADMIN";
 export const OPTIONAL_GUEST_CODE = "JF2027";
 
-export function isCoupleAdmin(firstName: string, email = "") {
-  const name = firstName.trim().toLowerCase();
-  if (name === "janelle" || name === "eric") return true;
+const COUPLE_EMAILS = new Set(["janellefore98@gmail.com", "emperorpenguin0522@gmail.com"]);
+
+export function isCoupleAdmin(firstName: string, email = "", lastName = "") {
   const mail = email.trim().toLowerCase();
-  return mail.startsWith("janelle") || mail.includes("janelle.fore");
+  if (COUPLE_EMAILS.has(mail)) return true;
+  const first = firstName.trim().toLowerCase();
+  const last = lastName.trim().toLowerCase();
+  return first === "janelle" && last === "fore";
 }
 
 export const NAV_PRIMARY = [

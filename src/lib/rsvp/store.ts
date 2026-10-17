@@ -200,6 +200,13 @@ export async function upsertRsvp(input: Partial<RsvpRecord>) {
   return next;
 }
 
+export async function removeRsvp(id: string) {
+  const store = await loadRsvpStore();
+  const next = { rsvps: store.rsvps.filter((item) => item.id !== id) };
+  await saveRsvpStore(next);
+  return next;
+}
+
 export async function resetRsvpStore() {
   const next: RsvpStore = { rsvps: [] };
   memory().store = next;

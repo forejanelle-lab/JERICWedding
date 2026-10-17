@@ -103,7 +103,7 @@ export function GatePage({
     if (selected) return state.invites.find((item) => item.id === selected.inviteId) ?? null;
     const needle = email.trim().toLowerCase();
     if (!needle) return null;
-    return state.invites.find((item) => item.email.toLowerCase() === needle) ?? null;
+    return state.invites.find((item) => String(item.email ?? "").toLowerCase() === needle) ?? null;
   }, [email, selected, state.invites]);
 
   const firstName = selected?.firstName || name.trim().split(/\s+/)[0] || "";
@@ -292,7 +292,7 @@ export function GatePage({
                     const value = event.target.value;
                     setEmail(value);
                     const match = state.invites.find(
-                      (item) => item.email.toLowerCase() === value.trim().toLowerCase(),
+                      (item) => String(item.email ?? "").toLowerCase() === value.trim().toLowerCase(),
                     );
                     if (match && !name) setName(`${match.firstName} ${match.lastName}`.trim());
                   }}

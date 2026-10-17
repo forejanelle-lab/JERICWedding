@@ -35,7 +35,7 @@ export function ApplyGateIdentity({ session }: { session: GateSession }) {
 
   useEffect(() => {
     if (!ready || !session.firstName) return;
-    if (isCoupleAdmin(session.firstName, session.email)) enableAdmin();
+    if (isCoupleAdmin(session.firstName, session.email, session.lastName)) enableAdmin();
     else logoutAdmin();
     recordGuestEntry({
       inviteId: session.inviteId,

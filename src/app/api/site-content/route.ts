@@ -9,7 +9,7 @@ async function canPublishSite() {
   if (await hasAdminCookie()) return true;
   const session = await getGateSession();
   if (!session) return false;
-  if (isCoupleAdmin(session.firstName, session.email)) return true;
+  if (isCoupleAdmin(session.firstName, session.email, session.lastName)) return true;
   return personIsSiteEditor({
     email: session.email,
     firstName: session.firstName,
@@ -27,12 +27,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const body = (await request.json()) as Partial<SiteContent>;
+  const current = await loadSiteContent();
   await replaceSiteContent({
     siteCopy: body.siteCopy ?? {},
     siteImages: body.siteImages ?? {},
     siteHidden: body.siteHidden ?? [],
     hiddenPages: body.hiddenPages ?? [],
     heroImage: body.heroImage ?? "/images/casale-bosco.jpg",
+    photoFolders: Array.isArray(body.photoFolders) ? body.photoFolders : current.photoFolders,
   });
   return NextResponse.json({ ok: true });
 }

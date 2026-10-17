@@ -16,8 +16,9 @@ export async function syncSharedRsvp(
     Partial<Pick<RsvpRecord, "id" | "submittedAt">> & {
       firstName?: string;
       lastName?: string;
+      skipEmail?: boolean;
     },
-) {
+): Promise<{ ok: boolean; rsvp: RsvpRecord | null }> {
   try {
     const response = await fetch("/api/rsvp/confirm", {
       method: "POST",
@@ -27,11 +28,13 @@ export async function syncSharedRsvp(
     if (!response.ok) {
       const body = await response.text();
       console.error("rsvp sync failed:", response.status, body);
-      return;
+      return { ok: false, rsvp: null };
     }
-    const data = (await response.json()) as { error?: string | null };
+    const data = (await response.json()) as { error?: string | null; rsvp?: RsvpRecord; saved?: boolean };
     if (data.error) console.error("rsvp email failed:", data.error);
+    return { ok: data.saved !== false, rsvp: data.rsvp ?? null };
   } catch (error) {
     console.error("rsvp confirmation request failed:", error);
+    return { ok: false, rsvp: null };
   }
 }

@@ -129,15 +129,15 @@ export function viewerTags(state: HubState) {
   if (canEditWebsite(state)) return ids;
   const identity = state.identity;
   if (!identity) return ids;
-  const email = identity.email.trim().toLowerCase();
-  const first = identity.firstName.trim().toLowerCase();
-  const last = identity.lastName.trim().toLowerCase();
+  const email = String(identity.email ?? "").trim().toLowerCase();
+  const first = String(identity.firstName ?? "").trim().toLowerCase();
+  const last = String(identity.lastName ?? "").trim().toLowerCase();
   const invite =
-    state.invites.find((item) => item.email.trim().toLowerCase() === email && email.length > 0) ??
+    state.invites.find((item) => String(item.email ?? "").trim().toLowerCase() === email && email.length > 0) ??
     state.invites.find(
       (item) =>
-        item.firstName.trim().toLowerCase() === first &&
-        (!last || item.lastName.trim().toLowerCase() === last),
+        String(item.firstName ?? "").trim().toLowerCase() === first &&
+        (!last || String(item.lastName ?? "").trim().toLowerCase() === last),
     );
   return inviteTags(invite, state);
 }

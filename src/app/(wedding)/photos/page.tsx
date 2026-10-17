@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
-import { FilterPills, Lightbox } from "@/components/site/Interactive";
+import { Lightbox } from "@/components/site/Interactive";
 import { EditText } from "@/components/site/EditText";
+import { GuestPhotoCard, PhotoFolders } from "@/components/site/PhotoFolders";
 import { PhotoTile } from "@/components/site/PhotoTile";
 import { PhotoUpload } from "@/components/site/PhotoUpload";
+import { visibleGuestPhotos } from "@/lib/hub/albums";
 import { useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
-import type { PhotoAlbum } from "@/lib/hub/types";
 
 const OURS = [
   { src: "/images/couple-hero.jpg", caption: "Janelle & Eric" },
@@ -17,19 +17,9 @@ const OURS = [
   { src: "/images/casale-bosco.jpg", caption: "The estate" },
 ];
 
-const ALBUMS: { id: PhotoAlbum | "all"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "recent", label: "Recent" },
-  { id: "friday", label: "Saturday" },
-  { id: "wedding", label: "Wedding" },
-  { id: "sunday", label: "Monday" },
-  { id: "travel", label: "Travel" },
-];
-
 export default function PhotosPage() {
-  const { state, deletePhoto, updatePhotoCaption } = useHub();
+  const { state } = useHub();
   const { t } = useI18n();
-  const [album, setAlbum] = useState<PhotoAlbum | "all">("all");
   const [oursIndex, setOursIndex] = useState<number | null>(null);
   const [wallIndex, setWallIndex] = useState<number | null>(null);
   const frames = useMemo(
@@ -43,11 +33,7 @@ export default function PhotosPage() {
     [state.siteCopy, state.siteHidden, state.siteImages],
   );
   const visibleOurs = frames.filter((frame) => !frame.hidden);
-  const photos = state.photos.filter((photo) => {
-    const mine = photo.authorId === state.identity?.guestId;
-    const visible = photo.approved || mine || state.adminAuthed;
-    return visible && (album === "all" || photo.album === album);
-  });
+  const photos = visibleGuestPhotos(state);
   const wallImages = useMemo(() => photos.map((photo) => ({ src: photo.src, caption: photo.caption })), [photos]);
   const oursImages = useMemo(
     () => visibleOurs.map((frame) => ({ src: frame.src, caption: frame.caption })),
@@ -67,6 +53,8 @@ export default function PhotosPage() {
           <EditText id="photos.intro" as="p" multiline className="mt-3 max-w-lg font-sans text-sm leading-relaxed text-charcoal/70">
             A handful of our favorite frames — and a wall for the ones you take.
           </EditText>
+
+          <PhotoFolders />
 
           <div id="upload" className="mt-8 border-t border-taupe/15 pt-6">
             <EditText id="photos.add" as="p" className="mb-4 font-sans text-[0.58rem] uppercase tracking-[0.22em] text-taupe">
@@ -91,78 +79,16 @@ export default function PhotosPage() {
           </div>
 
           <div className="mt-10">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <EditText id="photos.wall" as="h2" className="font-serif text-xl font-light tracking-[0.1em] uppercase">
-                Guest wall
-              </EditText>
-              <FilterPills
-                value={album}
-                onChange={setAlbum}
-                options={ALBUMS.map((item) => ({
-                  ...item,
-                  label:
-                    item.id === "all"
-                      ? t("photos.all")
-                      : item.id === "recent"
-                        ? t("photos.recent")
-                        : item.id === "friday"
-                          ? t("photos.saturday")
-                          : item.id === "wedding"
-                            ? t("photos.wedding")
-                            : item.id === "sunday"
-                              ? t("photos.monday")
-                              : t("photos.travel"),
-                }))}
-              />
-            </div>
+            <EditText id="photos.wall" as="h2" className="mb-4 font-serif text-xl font-light tracking-[0.1em] uppercase">
+              Guest wall
+            </EditText>
             {photos.length === 0 ? (
               <p className="font-sans text-sm text-charcoal/55">{t("photos.empty")}</p>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                {photos.map((photo, index) => {
-                  const canDelete = state.adminAuthed || state.identity?.guestId === photo.authorId;
-                  return (
-                    <figure key={photo.id} className="min-w-0">
-                      <button
-                        type="button"
-                        className="relative aspect-square w-full overflow-hidden rounded-lg"
-                        onClick={() => setWallIndex(index)}
-                      >
-                        {photo.src.startsWith("data:") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photo.src} alt={photo.caption} className="h-full w-full object-cover" />
-                        ) : (
-                          <Image src={photo.src} alt={photo.caption} fill className="object-cover" sizes="160px" />
-                        )}
-                        {canDelete ? (
-                          <span
-                            className="absolute bottom-2 right-2 z-[2] rounded-full bg-[#242424]/80 px-3 py-1.5 font-sans text-[0.52rem] uppercase tracking-[0.16em] text-[#F9F7F2]"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              deletePhoto(photo.id);
-                            }}
-                          >
-                            {t("photos.delete")}
-                          </span>
-                        ) : null}
-                      </button>
-                      {canDelete ? (
-                        <input
-                          className="mt-1.5 w-full border-0 bg-transparent font-sans text-[0.7rem] text-charcoal/65 outline-none"
-                          defaultValue={photo.caption}
-                          onBlur={(event) => {
-                            const next = event.target.value.trim();
-                            if (next !== photo.caption) updatePhotoCaption(photo.id, next);
-                          }}
-                          placeholder={t("photos.caption")}
-                        />
-                      ) : photo.caption ? (
-                        <p className="mt-1.5 font-sans text-[0.7rem] text-charcoal/65">{photo.caption}</p>
-                      ) : null}
-                    </figure>
-                  );
-                })}
+                {photos.map((photo, index) => (
+                  <GuestPhotoCard key={photo.id} photo={photo} onOpen={() => setWallIndex(index)} />
+                ))}
               </div>
             )}
           </div>

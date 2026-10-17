@@ -22,6 +22,7 @@ import type {
   Identity,
   InviteRecord,
   PhotoAlbum,
+  PhotoFolder,
   PhotoQuestion,
   PredictionQuestion,
   QuizQuestion,
@@ -35,6 +36,7 @@ import type {
   StayArea,
   Visibility,
 } from "@/lib/hub/types";
+import { mergePhotoFolders, nextPhotoFolderId, normalizePhotoFolders } from "@/lib/hub/albums";
 import { ADMIN_CODE, KNOW_US_QUESTIONS, PHOTO_QUESTIONS, PREDICTION_QUESTIONS, TRIVIA_QUESTIONS, isCoupleAdmin } from "@/lib/hub/content";
 import { ACCESS_TAGS, DEFAULT_GUEST_TAGS, EVENT_ACCESS, PAGE_ACCESS, canTogglePageHidden, identityCanEditSite, pageKey, slugifyTag } from "@/lib/hub/access";
 import { clearAdminCookie, clearGateCookie, setAdminCookie } from "@/lib/gate/admin";
@@ -79,6 +81,7 @@ const EMPTY_STATE: HubState = {
   guestbook: [],
   songs: [],
   photos: [],
+  photoFolders: normalizePhotoFolders(undefined),
   announcements: [],
   rsvps: [],
   savedPlaces: [],
@@ -114,12 +117,14 @@ function migrateSong(song: Song & { votes?: string[] }): Song {
 }
 
 export function householdNames(invite: InviteRecord) {
-  return [`${invite.firstName} ${invite.lastName}`.trim(), ...invite.party.map((name) => name.trim()).filter(Boolean)];
+  const party = Array.isArray(invite?.party) ? invite.party : [];
+  const primary = `${invite?.firstName ?? ""} ${invite?.lastName ?? ""}`.trim();
+  return [primary, ...party.map((name) => String(name ?? "").trim()).filter(Boolean)].filter(Boolean);
 }
 
 function mergeInviteLists(local: InviteRecord[], remote: InviteRecord[]) {
   const nameKey = (invite: InviteRecord) =>
-    `${invite.firstName.trim().toLowerCase()}|${invite.lastName.trim().toLowerCase()}`;
+    `${String(invite.firstName ?? "").trim().toLowerCase()}|${String(invite.lastName ?? "").trim().toLowerCase()}`;
   const byId = new Map(remote.map((invite) => [invite.id, invite]));
   const names = new Set(remote.map(nameKey));
   for (const invite of local) {
@@ -136,7 +141,14 @@ function contentFromState(state: HubState): SiteContent {
     siteHidden: state.siteHidden,
     hiddenPages: state.hiddenPages ?? [],
     heroImage: state.heroImage,
+    photoFolders: normalizePhotoFolders(state.photoFolders),
   };
+}
+
+function commitPhotoFolders(prev: HubState, photoFolders: PhotoFolder[]) {
+  const next = { ...prev, photoFolders };
+  void syncSiteContent(contentFromState(next));
+  return next;
 }
 
 function editorsFromInvites(invites: InviteRecord[]): SiteEditor[] {
@@ -236,12 +248,18 @@ type HubContextValue = {
   setHeroImage: (src: string) => void;
   uploadPhoto: (album: PhotoAlbum, caption: string, src: string) => void;
   updatePhotoCaption: (id: string, caption: string) => void;
+  updatePhotoAlbum: (id: string, album: PhotoAlbum) => void;
   deletePhoto: (id: string) => void;
+  addPhotoFolder: (label: string) => void;
+  renamePhotoFolder: (id: string, label: string) => void;
+  removePhotoFolder: (id: string) => void;
   moderatePhoto: (id: string, approved: boolean) => void;
   savePlace: (id: string) => void;
   addScore: (gameId: string, points: number) => void;
   savePredictions: (answers: Record<string, string>) => void;
-  submitRsvp: (record: Omit<RsvpRecord, "id" | "submittedAt">) => void;
+  submitRsvp: (record: Omit<RsvpRecord, "id" | "submittedAt">) => Promise<boolean>;
+  updateRsvp: (rsvp: RsvpRecord) => void;
+  deleteRsvp: (id: string) => void;
   publishAnnouncement: (input: Omit<Announcement, "id" | "publishedAt">) => void;
   subscribeUpdates: (email: string) => void;
   loginAdmin: (code: string) => boolean;
@@ -296,6 +314,7 @@ export function HubProvider({
           messages: Array.isArray(parsed.messages) ? parsed.messages : [],
           guestbook: Array.isArray(parsed.guestbook) ? parsed.guestbook : [],
           photos: Array.isArray(parsed.photos) ? parsed.photos : [],
+          photoFolders: normalizePhotoFolders(parsed.photoFolders),
           announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
           rsvps: Array.isArray(parsed.rsvps) ? parsed.rsvps : [],
           heroImage:
@@ -309,6 +328,10 @@ export function HubProvider({
           siteEditing: false,
           invites: (Array.isArray(parsed.invites) ? parsed.invites : []).map((invite) => ({
             ...invite,
+            firstName: String(invite.firstName ?? "").trim(),
+            lastName: String(invite.lastName ?? "").trim(),
+            email: String(invite.email ?? "").trim(),
+            party: Array.isArray(invite.party) ? invite.party.map((name) => String(name ?? "").trim()).filter(Boolean) : [],
             tags: invite.tags?.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
             invited: invite.invited !== false,
             entered: Boolean(invite.entered),
@@ -324,7 +347,7 @@ export function HubProvider({
           pageAccess: { ...PAGE_ACCESS, ...parsed.pageAccess },
           accessTags: parsed.accessTags?.length ? parsed.accessTags : ACCESS_TAGS.map((tag) => ({ ...tag })),
           adminAuthed: parsed.identity
-            ? isCoupleAdmin(parsed.identity.firstName, parsed.identity.email)
+            ? isCoupleAdmin(parsed.identity.firstName, parsed.identity.email, parsed.identity.lastName)
             : Boolean(parsed.adminAuthed || adminFromServer),
           siteEditor: Boolean(
             parsed.siteEditor ||
@@ -404,6 +427,7 @@ export function HubProvider({
         hiddenPages: [...new Set([...(remote.hiddenPages ?? []), ...(prev.hiddenPages ?? [])])],
         heroImage:
           prev.heroImage && prev.heroImage !== DEFAULT_HERO ? prev.heroImage : remote.heroImage || prev.heroImage,
+        photoFolders: mergePhotoFolders(remote.photoFolders, prev.photoFolders),
       }));
     });
     return () => {
@@ -415,11 +439,11 @@ export function HubProvider({
     if (!ready || state.adminAuthed) return;
     const name = state.identity?.firstName ?? "";
     const email = state.identity?.email ?? "";
-    if (state.identity && !isCoupleAdmin(name, email)) return;
-    if (!isCoupleAdmin(name, email) && !adminFromServer) return;
+    const last = state.identity?.lastName ?? "";
+    if (!isCoupleAdmin(name, email, last)) return;
     setState((prev) => ({ ...prev, adminAuthed: true }));
     void setAdminCookie();
-  }, [adminFromServer, ready, state.adminAuthed, state.identity, state.identity?.email, state.identity?.firstName]);
+  }, [ready, state.adminAuthed, state.identity, state.identity?.email, state.identity?.firstName, state.identity?.lastName]);
 
   useEffect(() => {
     if (!ready || !state.adminAuthed) return;
@@ -460,7 +484,7 @@ export function HubProvider({
   );
 
   const join: HubContextValue["join"] = useCallback((input) => {
-    const coupleAdmin = isCoupleAdmin(input.firstName.trim(), input.email.trim());
+    const coupleAdmin = isCoupleAdmin(input.firstName.trim(), input.email.trim(), input.lastName.trim());
     setState((prev) => {
       const guestId = uid("me");
       const guest: Guest = {
@@ -508,11 +532,12 @@ export function HubProvider({
     const name = firstName.trim();
     if (!name) return;
     const mail = email.trim();
-    let coupleAdmin = isCoupleAdmin(name, mail);
+    const last = lastName.trim();
+    let coupleAdmin = isCoupleAdmin(name, mail, last);
     let applied = false;
     setState((prev) => {
       if (!prev.identity) return prev;
-      coupleAdmin = isCoupleAdmin(name, mail || prev.identity.email);
+      coupleAdmin = isCoupleAdmin(name, mail || prev.identity.email, last || prev.identity.lastName);
       applied = true;
       return {
         ...prev,
@@ -547,7 +572,14 @@ export function HubProvider({
   }, []);
 
   const signOut = useCallback(async () => {
-    setState((prev) => ({ ...prev, identity: null }));
+    setState((prev) => ({
+      ...prev,
+      identity: null,
+      adminAuthed: false,
+      siteEditor: false,
+      siteEditing: false,
+    }));
+    await clearAdminCookie();
     await clearGateCookie();
     window.location.assign("/");
   }, []);
@@ -1014,6 +1046,54 @@ export function HubProvider({
     }));
   }, []);
 
+  const updatePhotoAlbum = useCallback((id: string, album: PhotoAlbum) => {
+    setState((prev) => {
+      const photo = prev.photos.find((item) => item.id === id);
+      if (!photo) return prev;
+      const allowed = prev.identity?.guestId === photo.authorId || prev.adminAuthed;
+      if (!allowed) return prev;
+      if (!prev.photoFolders.some((folder) => folder.id === album)) return prev;
+      return {
+        ...prev,
+        photos: prev.photos.map((item) => (item.id === id ? { ...item, album } : item)),
+      };
+    });
+  }, []);
+
+  const addPhotoFolder = useCallback((label: string) => {
+    const name = label.trim();
+    if (!name) return;
+    setState((prev) => {
+      if (!prev.adminAuthed) return prev;
+      const folders = normalizePhotoFolders(prev.photoFolders);
+      return commitPhotoFolders(prev, [...folders, { id: nextPhotoFolderId(name, folders), label: name }]);
+    });
+  }, []);
+
+  const renamePhotoFolder = useCallback((id: string, label: string) => {
+    const name = label.trim();
+    if (!name) return;
+    setState((prev) => {
+      if (!prev.adminAuthed) return prev;
+      return commitPhotoFolders(
+        prev,
+        normalizePhotoFolders(prev.photoFolders).map((folder) => (folder.id === id ? { ...folder, label: name } : folder)),
+      );
+    });
+  }, []);
+
+  const removePhotoFolder = useCallback((id: string) => {
+    setState((prev) => {
+      if (!prev.adminAuthed) return prev;
+      const folders = normalizePhotoFolders(prev.photoFolders);
+      if (folders.length <= 1) return prev;
+      return commitPhotoFolders(
+        prev,
+        folders.filter((folder) => folder.id !== id),
+      );
+    });
+  }, []);
+
   const deletePhoto = useCallback((id: string) => {
     setState((prev) => {
       const photo = prev.photos.find((item) => item.id === id);
@@ -1071,19 +1151,48 @@ export function HubProvider({
     });
   }, []);
 
-  const submitRsvp = useCallback((record: Omit<RsvpRecord, "id" | "submittedAt">) => {
+  const submitRsvp = useCallback(async (record: Omit<RsvpRecord, "id" | "submittedAt">) => {
     const email = record.email.trim() || state.identity?.email?.trim() || "";
     const nameParts = record.name.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || state.identity?.firstName || "";
+    const lastName = nameParts.slice(1).join(" ") || state.identity?.lastName || "";
     const rsvp: RsvpRecord = {
       ...record,
       email,
+      partyAttending: Array.isArray(record.partyAttending) ? record.partyAttending : [],
       id: uid("rsvp"),
       submittedAt: new Date().toISOString(),
     };
     setState((prev) => {
       const events = record.attending ? record.events : [];
+      const nameKey = `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}`;
+      const emailKey = email.trim().toLowerCase();
+      const hasInvite = prev.invites.some((invite) => {
+        if (record.inviteId && !record.inviteId.startsWith("new-") && invite.id === record.inviteId) return true;
+        if (emailKey && String(invite.email ?? "").trim().toLowerCase() === emailKey) return true;
+        return `${String(invite.firstName ?? "").trim().toLowerCase()}|${String(invite.lastName ?? "").trim().toLowerCase()}` === nameKey;
+      });
+      const invites: InviteRecord[] = hasInvite
+        ? prev.invites
+        : [
+            {
+              id: record.inviteId.startsWith("new-") || !record.inviteId ? uid("inv") : record.inviteId,
+              firstName: firstName || "Guest",
+              lastName,
+              email,
+              location: "",
+              inItaly: false,
+              party: rsvp.partyAttending.filter((name) => name.trim().toLowerCase() !== rsvp.name.trim().toLowerCase()),
+              events: (events.length ? events : ["welcome", "ceremony", "reception", "brunch"]) as EventId[],
+              tags: [...DEFAULT_GUEST_TAGS],
+              invited: true,
+              entered: true,
+            },
+            ...prev.invites,
+          ];
       return {
         ...prev,
+        invites,
         rsvps: mergeRsvpLists([rsvp, ...prev.rsvps], []),
         guests: prev.identity
           ? prev.guests.map((guest) =>
@@ -1104,12 +1213,56 @@ export function HubProvider({
           : prev.guests,
       };
     });
+    try {
+      const result = await syncSharedRsvp({
+        ...rsvp,
+        firstName,
+        lastName,
+      });
+      const remote = await fetchSharedInvites();
+      setState((prev) => ({
+        ...prev,
+        rsvps: result.rsvp ? mergeRsvpLists([result.rsvp, ...prev.rsvps], []) : prev.rsvps,
+        invites: remote.length ? mergeInviteLists(prev.invites, remote) : prev.invites,
+      }));
+      return result.ok;
+    } catch {
+      return false;
+    }
+  }, [state.identity]);
+
+  const updateRsvp = useCallback((rsvp: RsvpRecord) => {
+    const nameParts = rsvp.name.trim().split(/\s+/).filter(Boolean);
+    setState((prev) => {
+      const exists = prev.rsvps.some((item) => item.id === rsvp.id);
+      return {
+        ...prev,
+        rsvps: exists
+          ? prev.rsvps.map((item) => (item.id === rsvp.id ? rsvp : item))
+          : mergeRsvpLists([rsvp, ...prev.rsvps], []),
+      };
+    });
     void syncSharedRsvp({
       ...rsvp,
-      firstName: nameParts[0] || state.identity?.firstName || "",
-      lastName: nameParts.slice(1).join(" ") || state.identity?.lastName || "",
-    });
-  }, [state.identity]);
+      firstName: nameParts[0] || "",
+      lastName: nameParts.slice(1).join(" "),
+      skipEmail: true,
+    })
+      .then(async (result) => {
+        const remote = await fetchSharedInvites();
+        setState((prev) => ({
+          ...prev,
+          rsvps: result.rsvp ? mergeRsvpLists([result.rsvp, ...prev.rsvps], []) : prev.rsvps,
+          invites: remote.length ? mergeInviteLists(prev.invites, remote) : prev.invites,
+        }));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const deleteRsvp = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, rsvps: prev.rsvps.filter((item) => item.id !== id) }));
+    void fetch(`/api/rsvp?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
+  }, []);
 
   const publishAnnouncement = useCallback((input: Omit<Announcement, "id" | "publishedAt">) => {
     setState((prev) => ({
@@ -1316,12 +1469,18 @@ export function HubProvider({
       setHeroImage,
       uploadPhoto,
       updatePhotoCaption,
+      updatePhotoAlbum,
       deletePhoto,
+      addPhotoFolder,
+      renamePhotoFolder,
+      removePhotoFolder,
       moderatePhoto,
       savePlace,
       addScore,
       savePredictions,
       submitRsvp,
+      updateRsvp,
+      deleteRsvp,
       publishAnnouncement,
       subscribeUpdates,
       loginAdmin,
@@ -1377,12 +1536,18 @@ export function HubProvider({
       setHeroImage,
       uploadPhoto,
       updatePhotoCaption,
+      updatePhotoAlbum,
       deletePhoto,
+      addPhotoFolder,
+      renamePhotoFolder,
+      removePhotoFolder,
       moderatePhoto,
       savePlace,
       addScore,
       savePredictions,
       submitRsvp,
+      updateRsvp,
+      deleteRsvp,
       publishAnnouncement,
       subscribeUpdates,
       loginAdmin,

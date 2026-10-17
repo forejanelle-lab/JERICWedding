@@ -39,7 +39,7 @@ export function Lightbox({
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      document.body.style.overflow = document.body.dataset.modal ? "hidden" : "";
     };
   }, [index, onClose, onPrev, onNext]);
 

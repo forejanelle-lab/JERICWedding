@@ -172,6 +172,28 @@ export async function replaceInvites(invites: InviteRecord[]) {
   return next;
 }
 
+export async function upsertStoredInvite(invite: Partial<InviteRecord>) {
+  const normalized = normalizeInvite(invite);
+  if (!normalized) return loadInviteStore();
+  const store = await loadInviteStore();
+  const nameKey = (item: InviteRecord) =>
+    `${item.firstName.trim().toLowerCase()}|${item.lastName.trim().toLowerCase()}`;
+  const key = nameKey(normalized);
+  const email = normalized.email.trim().toLowerCase();
+  const invites = [
+    normalized,
+    ...store.invites.filter((item) => {
+      if (item.id === normalized.id) return false;
+      if (nameKey(item) === key) return false;
+      if (email && String(item.email ?? "").trim().toLowerCase() === email) return false;
+      return true;
+    }),
+  ];
+  const next = { invites };
+  await saveInviteStore(next);
+  return next;
+}
+
 export function findStoredInvite(
   invites: InviteRecord[],
   input: { email?: string; firstName?: string; lastName?: string; inviteId?: string },
@@ -183,7 +205,7 @@ export function findStoredInvite(
   }
   const email = input.email?.trim().toLowerCase() ?? "";
   if (email) {
-    const byEmail = invites.find((invite) => invite.email.trim().toLowerCase() === email);
+    const byEmail = invites.find((invite) => String(invite.email ?? "").trim().toLowerCase() === email);
     if (byEmail) return byEmail;
   }
   const first = input.firstName?.trim().toLowerCase() ?? "";
@@ -192,8 +214,8 @@ export function findStoredInvite(
   return (
     invites.find(
       (invite) =>
-        invite.firstName.trim().toLowerCase() === first &&
-        (!last || invite.lastName.trim().toLowerCase() === last),
+        String(invite.firstName ?? "").trim().toLowerCase() === first &&
+        (!last || String(invite.lastName ?? "").trim().toLowerCase() === last),
     ) ?? null
   );
 }
