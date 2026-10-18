@@ -31,10 +31,13 @@ export async function POST(request: Request) {
   await replaceSiteContent({
     siteCopy: body.siteCopy ?? {},
     siteImages: body.siteImages ?? {},
-    siteHidden: body.siteHidden ?? [],
-    hiddenPages: body.hiddenPages ?? [],
-    heroImage: body.heroImage ?? "/images/casale-bosco.jpg",
+    siteHidden: Array.isArray(body.siteHidden) ? body.siteHidden : current.siteHidden,
+    hiddenPages: Array.isArray(body.hiddenPages) ? body.hiddenPages : current.hiddenPages,
+    heroImage: body.heroImage ?? current.heroImage,
     photoFolders: Array.isArray(body.photoFolders) ? body.photoFolders : current.photoFolders,
+    gameQuestions: body.gameQuestions ?? current.gameQuestions,
+    photoQuestions: body.photoQuestions ?? current.photoQuestions,
+    predictionQuestions: body.predictionQuestions ?? current.predictionQuestions,
   });
   return NextResponse.json({ ok: true });
 }

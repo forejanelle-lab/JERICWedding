@@ -142,12 +142,44 @@ function contentFromState(state: HubState): SiteContent {
     hiddenPages: state.hiddenPages ?? [],
     heroImage: state.heroImage,
     photoFolders: normalizePhotoFolders(state.photoFolders),
+    gameQuestions: state.gameQuestions,
+    photoQuestions: state.photoQuestions,
+    predictionQuestions: state.predictionQuestions,
   };
+}
+
+let siteContentReady = false;
+
+function sameJson(a: unknown, b: unknown) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function chooseSavedList<T>(remote: T[] | undefined, local: T[] | undefined, fallback: T[]) {
+  if (remote?.length && !sameJson(remote, fallback)) return remote;
+  if (local?.length && !sameJson(local, fallback)) return local;
+  return remote?.length ? remote : local?.length ? local : fallback;
+}
+
+function chooseGameQuestions(
+  remote: SiteContent["gameQuestions"] | undefined,
+  local: HubState["gameQuestions"],
+) {
+  return {
+    ...local,
+    ...remote,
+    "know-us": chooseSavedList(remote?.["know-us"], local["know-us"], KNOW_US_QUESTIONS),
+    trivia: chooseSavedList(remote?.trivia, local.trivia, TRIVIA_QUESTIONS),
+  };
+}
+
+function publishSiteContent(state: HubState) {
+  if (!siteContentReady) return;
+  void syncSiteContent(contentFromState(state));
 }
 
 function commitPhotoFolders(prev: HubState, photoFolders: PhotoFolder[]) {
   const next = { ...prev, photoFolders };
-  void syncSiteContent(contentFromState(next));
+  publishSiteContent(next);
   return next;
 }
 
@@ -421,16 +453,37 @@ export function HubProvider({
     let cancelled = false;
     void fetchSiteContent().then((remote) => {
       if (cancelled || !remote) return;
-      setState((prev) => ({
-        ...prev,
-        siteCopy: { ...remote.siteCopy, ...prev.siteCopy },
-        siteImages: { ...remote.siteImages, ...prev.siteImages },
-        siteHidden: [...new Set([...(remote.siteHidden ?? []), ...(prev.siteHidden ?? [])])],
-        hiddenPages: [...new Set([...(remote.hiddenPages ?? []), ...(prev.hiddenPages ?? [])])],
-        heroImage:
-          prev.heroImage && prev.heroImage !== DEFAULT_HERO ? prev.heroImage : remote.heroImage || prev.heroImage,
-        photoFolders: mergePhotoFolders(remote.photoFolders, prev.photoFolders),
-      }));
+      siteContentReady = true;
+      setState((prev) => {
+        const gameQuestions = chooseGameQuestions(remote.gameQuestions, prev.gameQuestions);
+        const photoQuestions = chooseSavedList(remote.photoQuestions, prev.photoQuestions, PHOTO_QUESTIONS);
+        const predictionQuestions = chooseSavedList(
+          remote.predictionQuestions,
+          prev.predictionQuestions,
+          PREDICTION_QUESTIONS,
+        );
+        const next = {
+          ...prev,
+          siteCopy: { ...remote.siteCopy, ...prev.siteCopy },
+          siteImages: { ...remote.siteImages, ...prev.siteImages },
+          siteHidden: remote.siteHidden ?? [],
+          hiddenPages: remote.hiddenPages ?? [],
+          heroImage:
+            prev.heroImage && prev.heroImage !== DEFAULT_HERO ? prev.heroImage : remote.heroImage || prev.heroImage,
+          photoFolders: mergePhotoFolders(remote.photoFolders, prev.photoFolders),
+          gameQuestions,
+          photoQuestions,
+          predictionQuestions,
+        };
+        const shouldShare =
+          (!sameJson(gameQuestions, remote.gameQuestions) &&
+            !sameJson(gameQuestions, { "know-us": KNOW_US_QUESTIONS, trivia: TRIVIA_QUESTIONS })) ||
+          (!sameJson(photoQuestions, remote.photoQuestions) && !sameJson(photoQuestions, PHOTO_QUESTIONS)) ||
+          (!sameJson(predictionQuestions, remote.predictionQuestions) &&
+            !sameJson(predictionQuestions, PREDICTION_QUESTIONS));
+        if (shouldShare) publishSiteContent(next);
+        return next;
+      });
     });
     return () => {
       cancelled = true;
@@ -1059,7 +1112,7 @@ export function HubProvider({
   const setHeroImage = useCallback((src: string) => {
     setState((prev) => {
       const next = { ...prev, heroImage: src };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);
@@ -1351,24 +1404,33 @@ export function HubProvider({
 
   const setSiteEditing = useCallback((on: boolean) => {
     setState((prev) => {
-      if (!on) void syncSiteContent(contentFromState(prev));
+      if (!on) publishSiteContent(prev);
       return { ...prev, siteEditing: on };
     });
   }, []);
 
   const setGameQuestions = useCallback((gameId: string, questions: QuizQuestion[]) => {
-    setState((prev) => ({
-      ...prev,
-      gameQuestions: { ...prev.gameQuestions, [gameId]: questions },
-    }));
+    setState((prev) => {
+      const next = { ...prev, gameQuestions: { ...prev.gameQuestions, [gameId]: questions } };
+      publishSiteContent(next);
+      return next;
+    });
   }, []);
 
   const setPhotoQuestions = useCallback((questions: PhotoQuestion[]) => {
-    setState((prev) => ({ ...prev, photoQuestions: questions }));
+    setState((prev) => {
+      const next = { ...prev, photoQuestions: questions };
+      publishSiteContent(next);
+      return next;
+    });
   }, []);
 
   const setPredictionQuestions = useCallback((questions: PredictionQuestion[]) => {
-    setState((prev) => ({ ...prev, predictionQuestions: questions }));
+    setState((prev) => {
+      const next = { ...prev, predictionQuestions: questions };
+      publishSiteContent(next);
+      return next;
+    });
   }, []);
 
   const setEventAccess = useCallback((eventId: string, tags: string[]) => {
@@ -1424,7 +1486,7 @@ export function HubProvider({
   const updateSiteCopy = useCallback((id: string, value: string) => {
     setState((prev) => {
       const next = { ...prev, siteCopy: { ...prev.siteCopy, [id]: value } };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);
@@ -1436,7 +1498,7 @@ export function HubProvider({
         siteImages: { ...prev.siteImages, [id]: src },
         siteHidden: prev.siteHidden.filter((item) => item !== id),
       };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);
@@ -1447,7 +1509,7 @@ export function HubProvider({
         ...prev,
         siteHidden: prev.siteHidden.includes(id) ? prev.siteHidden : [...prev.siteHidden, id],
       };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);
@@ -1458,7 +1520,7 @@ export function HubProvider({
         ...prev,
         siteHidden: prev.siteHidden.filter((item) => item !== id),
       };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);
@@ -1473,7 +1535,7 @@ export function HubProvider({
           ? prev.hiddenPages.filter((item) => item !== key)
           : [...(prev.hiddenPages ?? []), key],
       };
-      void syncSiteContent(contentFromState(next));
+      publishSiteContent(next);
       return next;
     });
   }, []);

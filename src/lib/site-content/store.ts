@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { normalizePhotoFolders } from "@/lib/hub/albums";
+import type { PhotoQuestion, PredictionQuestion, QuizQuestion } from "@/lib/hub/types";
 import type { SiteContent } from "@/lib/site-content/types";
 
 const FILE = path.join(process.cwd(), ".data", "site-content.json");
@@ -34,6 +35,19 @@ function asRecord(value: unknown): Record<string, string> {
   );
 }
 
+function asQuestionList<T>(value: unknown): T[] | undefined {
+  return Array.isArray(value) && value.length ? (value as T[]) : undefined;
+}
+
+function asGameQuestions(value: unknown): Record<string, QuizQuestion[]> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>).flatMap(([key, questions]) => {
+    const list = asQuestionList<QuizQuestion>(questions);
+    return list ? [[key, list] as const] : [];
+  });
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
 function normalizeStore(raw: unknown): SiteContent {
   const value = (raw ?? {}) as Partial<SiteContent>;
   return {
@@ -43,6 +57,9 @@ function normalizeStore(raw: unknown): SiteContent {
     hiddenPages: Array.isArray(value.hiddenPages) ? value.hiddenPages.map(String) : [],
     heroImage: typeof value.heroImage === "string" && value.heroImage ? value.heroImage : DEFAULT_HERO,
     photoFolders: normalizePhotoFolders(value.photoFolders),
+    gameQuestions: asGameQuestions(value.gameQuestions),
+    photoQuestions: asQuestionList<PhotoQuestion>(value.photoQuestions),
+    predictionQuestions: asQuestionList<PredictionQuestion>(value.predictionQuestions),
   };
 }
 

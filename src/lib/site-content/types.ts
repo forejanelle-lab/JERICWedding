@@ -1,4 +1,4 @@
-import type { PhotoFolder } from "@/lib/hub/types";
+import type { PhotoFolder, PhotoQuestion, PredictionQuestion, QuizQuestion } from "@/lib/hub/types";
 
 export type SiteContent = {
   siteCopy: Record<string, string>;
@@ -7,4 +7,7 @@ export type SiteContent = {
   hiddenPages: string[];
   heroImage: string;
   photoFolders: PhotoFolder[];
+  gameQuestions?: Record<string, QuizQuestion[]>;
+  photoQuestions?: PhotoQuestion[];
+  predictionQuestions?: PredictionQuestion[];
 };
