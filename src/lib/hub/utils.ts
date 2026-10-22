@@ -95,14 +95,22 @@ function fitSize(width: number, height: number, maxEdge: number) {
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
 
-function canvasToJpeg(source: CanvasImageSource, width: number, height: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas");
-  ctx.drawImage(source, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+function canvasToJpeg(source: CanvasImageSource, width: number, height: number, quality = JPEG_QUALITY) {
+  const paint = (edge: number, nextQuality: number) => {
+    const size = fitSize(width, height, edge);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    ctx.drawImage(source, 0, 0, size.width, size.height);
+    return canvas.toDataURL("image/jpeg", nextQuality);
+  };
+  const encoded = paint(Math.max(width, height), quality);
+  if (encoded.startsWith("data:image/jpeg") && encoded.length <= 900_000) return encoded;
+  const smaller = paint(1000, 0.62);
+  if (!smaller.startsWith("data:image/jpeg")) throw new Error("unsupported");
+  return smaller;
 }
 
 function loadHtmlImage(src: string) {
@@ -138,7 +146,7 @@ export async function readImageAsCompressedDataUrl(file: File): Promise<string> 
     const size = fitSize(image.naturalWidth || image.width, image.naturalHeight || image.height, MAX_PHOTO_EDGE);
     return canvasToJpeg(image, size.width, size.height);
   } catch {
-    return dataUrl;
+    throw new Error("unsupported");
   }
 }
 

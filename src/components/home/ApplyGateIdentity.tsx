@@ -35,8 +35,21 @@ export function ApplyGateIdentity({ session }: { session: GateSession }) {
 
   useEffect(() => {
     if (!ready || !session.firstName) return;
-    if (isCoupleAdmin(session.firstName, session.email, session.lastName)) enableAdmin();
-    else logoutAdmin();
+    const couple = isCoupleAdmin(session.firstName, session.email, session.lastName);
+    if (couple) {
+      if (!state.adminAuthed) enableAdmin();
+    } else if (state.adminAuthed) {
+      logoutAdmin();
+    } else {
+      try {
+        if (!window.sessionStorage.getItem("jeric-admin-cleared")) {
+          window.sessionStorage.setItem("jeric-admin-cleared", "1");
+          logoutAdmin();
+        }
+      } catch {
+        // A missing admin cookie is fine if storage is blocked.
+      }
+    }
     recordGuestEntry({
       inviteId: session.inviteId,
       firstName: session.firstName,
@@ -45,17 +58,27 @@ export function ApplyGateIdentity({ session }: { session: GateSession }) {
       location: session.location,
       fromList: session.fromList,
     });
-    if (state.identity) {
+    const signedInEmail = String(state.identity?.email ?? "").trim().toLowerCase();
+    const sessionEmail = String(session.email ?? "").trim().toLowerCase();
+    const samePerson = Boolean(
+      state.identity &&
+        ((sessionEmail && signedInEmail === sessionEmail) ||
+          (!sessionEmail &&
+            state.identity.firstName === session.firstName &&
+            state.identity.lastName === session.lastName)),
+    );
+    if (samePerson && state.identity) {
       joining.current = false;
       if (
         state.identity.firstName !== session.firstName ||
         state.identity.lastName !== session.lastName ||
-        state.identity.email !== session.email
+        signedInEmail !== sessionEmail
       ) {
         updateIdentityFromGate(session.firstName, session.lastName, session.email);
       }
       return;
     }
+    if (state.identity) joining.current = false;
     if (joining.current) return;
     joining.current = true;
     join({
@@ -65,7 +88,7 @@ export function ApplyGateIdentity({ session }: { session: GateSession }) {
       city: session.location,
       side: "both",
     });
-  }, [enableAdmin, join, logoutAdmin, ready, recordGuestEntry, session, state.identity, updateIdentityFromGate]);
+  }, [enableAdmin, join, logoutAdmin, ready, recordGuestEntry, session, state.adminAuthed, state.identity, updateIdentityFromGate]);
 
   return null;
 }

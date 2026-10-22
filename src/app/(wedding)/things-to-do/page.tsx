@@ -16,6 +16,7 @@ export default function ThingsToDoPage() {
   const { t } = useI18n();
   const [cat, setCat] = useState<PlaceCategory | "all">("all");
   const places = PLACES.filter((place) => cat === "all" || place.category === cat);
+  const savedPlaces = state.savedPlaces ?? [];
 
   return (
     <main className="pt-[calc(4.75rem+env(safe-area-inset-top))] md:pt-28">
@@ -26,8 +27,8 @@ export default function ThingsToDoPage() {
           title="Things to do"
           description="Save a few. Skip the rest."
         />
-        {state.savedPlaces.length ? (
-          <p className="mt-4 text-center font-sans text-sm text-olive">{t("todo.nSaved", { n: state.savedPlaces.length })}</p>
+        {savedPlaces.length ? (
+          <p className="mt-4 text-center font-sans text-sm text-olive">{t("todo.nSaved", { n: savedPlaces.length })}</p>
         ) : null}
         <div className="mt-8">
           <FilterPills
@@ -38,7 +39,7 @@ export default function ThingsToDoPage() {
         </div>
         <ul className="mx-auto mt-8 max-w-3xl divide-y divide-taupe/15 rounded-2xl border border-taupe/15 bg-cream">
           {places.map((place) => {
-            const saved = state.savedPlaces.includes(place.id);
+            const saved = savedPlaces.includes(place.id);
             return (
               <li key={place.id} className="flex gap-4 p-4">
                 <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl">

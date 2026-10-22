@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { canEditWebsite } from "@/lib/hub/access";
 import { useHub } from "@/lib/hub/store";
-import { readFileAsDataUrl, readImageAsCompressedDataUrl } from "@/lib/hub/utils";
+import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
 
 export function EditImage({
   id,
@@ -31,12 +31,13 @@ export function EditImage({
   const resolved = custom ?? src;
   const admin = canEditWebsite(state) && state.siteEditing;
   const inputRef = useRef<HTMLInputElement>(null);
+  const [replaceError, setReplaceError] = useState("");
   const data = resolved.startsWith("data:") || Boolean(custom);
 
   const picture = data ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      key={resolved.slice(0, 48)}
+      key={`${id}:${resolved.length}:${resolved.slice(-32)}`}
       src={resolved}
       alt={alt}
       className={fill ? `absolute inset-0 h-full w-full object-cover ${className}` : className}
@@ -82,6 +83,11 @@ export function EditImage({
       onPointerDown={(event) => event.stopPropagation()}
     >
       {picture}
+      {replaceError ? (
+        <p className="absolute bottom-2 left-2 right-2 z-30 rounded-md bg-[#242424]/85 px-2 py-1 text-center font-sans text-[0.55rem] uppercase tracking-[0.12em] text-[#F9F7F2]">
+          {replaceError}
+        </p>
+      ) : null}
       <div className="pointer-events-auto absolute left-2 top-2 z-30 flex gap-1">
         <button
           type="button"
@@ -117,14 +123,11 @@ export function EditImage({
           const file = event.target.files?.[0];
           event.target.value = "";
           if (!file) return;
+          setReplaceError("");
           try {
             updateSiteImage(id, await readImageAsCompressedDataUrl(file));
           } catch {
-            try {
-              updateSiteImage(id, await readFileAsDataUrl(file));
-            } catch {
-              // Keep the current photo if the file cannot be read.
-            }
+            setReplaceError("Couldn’t save that photo. Try a JPEG.");
           }
         }}
       />

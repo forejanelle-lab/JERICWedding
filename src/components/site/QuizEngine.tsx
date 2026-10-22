@@ -113,7 +113,7 @@ export function QuizEngine({
         )}
       </h2>
       <div className="mt-8 space-y-3">
-        {question.options.map((option, optionIndex) => {
+        {(question.options ?? []).map((option, optionIndex) => {
           const optKey = editId ? `${editId}.q.${question.id}.opt.${optionIndex}` : "";
           const isCorrect = optionIndex === question.correctIndex;
           const isPick = optionIndex === selected;

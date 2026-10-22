@@ -18,7 +18,7 @@ export default function PhotoGamePage() {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const question = questions[index];
-  const played = state.completedGames.includes("photos");
+  const played = (state.completedGames ?? []).includes("photos");
 
   if (canEditWebsite(state) && state.siteEditing) {
     return (
@@ -76,7 +76,7 @@ export default function PhotoGamePage() {
           {question.prompt}
         </EditText>
         <div className="mt-6 space-y-3">
-          {question.options.map((option, optionIndex) => {
+          {(question.options ?? []).map((option, optionIndex) => {
             const revealed = selected !== null;
             const correct = optionIndex === question.correctIndex;
             const optKey = `play.photos.${question.id}.opt.${optionIndex}`;

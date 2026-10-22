@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { setAdminCookie } from "@/lib/gate/admin";
 import { allTagIds, inviteTags, tagCatalog, tagLabel } from "@/lib/hub/access";
-import { ADMIN_CODE, EVENT_LABELS, STAY_LABELS } from "@/lib/hub/content";
+import { EVENT_LABELS, STAY_LABELS } from "@/lib/hub/content";
 import { AccessTagEditor, GameEditor } from "@/components/site/GameEditor";
 import { PhotoFolderEditor } from "@/components/site/PhotoFolders";
 import { householdNames, useHub } from "@/lib/hub/store";
@@ -39,7 +39,6 @@ export default function AdminPage() {
           <input value={code} onChange={(e) => setCode(e.target.value)} className="input-line" placeholder="Admin code" />
           {error ? <p className="font-sans text-sm text-olive">{error}</p> : null}
           <button type="submit" className="btn-primary w-full">Enter</button>
-          <p className="font-sans text-xs text-taupe">Preview: {ADMIN_CODE}</p>
         </form>
       </main>
     );
@@ -131,7 +130,7 @@ export default function AdminPage() {
           <div className="space-y-3">
             {state.songs.map((song) => (
               <div key={song.id} className="soft-card flex items-center justify-between p-4">
-                <p>{song.title} — {song.artist} · ▲{song.ups.length} ▼{song.downs.length}</p>
+                <p>{song.title} — {song.artist} · ▲{song.ups?.length ?? 0} ▼{song.downs?.length ?? 0}</p>
                 <button type="button" className="btn-secondary !px-3 !py-2" onClick={() => hub.moderateSong(song.id, false)}>
                   Remove
                 </button>
@@ -164,7 +163,8 @@ export default function AdminPage() {
 }
 
 function partySize(rsvp: RsvpRecord) {
-  if (rsvp.partyAttending.length) return rsvp.partyAttending.length;
+  const party = Array.isArray(rsvp.partyAttending) ? rsvp.partyAttending : [];
+  if (party.length) return party.length;
   return rsvp.guestCount || (rsvp.attending ? 1 : 0);
 }
 
@@ -191,17 +191,17 @@ function blankRsvp(): RsvpRecord {
 }
 
 function normalizeAdminRsvp(rsvp: RsvpRecord): RsvpRecord {
-  const named = rsvp.name.trim();
+  const named = String(rsvp.name ?? "").trim();
   const partyAttending = rsvp.attending
-    ? rsvp.partyAttending.map((name) => name.trim()).filter(Boolean)
+    ? (Array.isArray(rsvp.partyAttending) ? rsvp.partyAttending : []).map((name) => String(name).trim()).filter(Boolean)
     : [];
   const party = rsvp.attending && partyAttending.length === 0 && named ? [named] : partyAttending;
   return {
     ...rsvp,
     id: rsvp.id || `rsvp-${Date.now().toString(36)}`,
     name: named,
-    email: rsvp.email.trim(),
-    events: rsvp.attending ? rsvp.events : [],
+    email: String(rsvp.email ?? "").trim(),
+    events: rsvp.attending ? (Array.isArray(rsvp.events) ? rsvp.events : []) : [],
     partyAttending: party,
     guestCount: rsvp.attending ? party.length || rsvp.guestCount || 1 : 0,
     submittedAt: rsvp.submittedAt || new Date().toISOString(),
@@ -274,7 +274,7 @@ function RsvpBoard({ rsvps }: { rsvps: RsvpRecord[] }) {
         <p className="label-caps">Coming by event</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {eventIds.map((eventId) => {
-            const attending = yes.filter((rsvp) => rsvp.events.includes(eventId));
+            const attending = yes.filter((rsvp) => (rsvp.events ?? []).includes(eventId));
             const people = attending.reduce((sum, rsvp) => sum + partySize(rsvp), 0);
             return (
               <div key={eventId} className="rounded-2xl border border-taupe/15 bg-cream/60 px-4 py-4">
@@ -406,13 +406,13 @@ function RsvpColumn({
                 </span>
               </div>
               <p className="mt-1 text-charcoal/70">
-                {rsvp.partyAttending.join(", ") || `${partySize(rsvp)} ${partySize(rsvp) === 1 ? "guest" : "guests"}`}
+                {(rsvp.partyAttending ?? []).join(", ") || `${partySize(rsvp)} ${partySize(rsvp) === 1 ? "guest" : "guests"}`}
               </p>
               {rsvp.email ? <p className="mt-1 text-charcoal/65">{rsvp.email}</p> : null}
               {rsvp.attending ? (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {(Object.keys(EVENT_LABELS) as EventId[]).map((eventId) => {
-                    const on = rsvp.events.includes(eventId);
+                    const on = (rsvp.events ?? []).includes(eventId);
                     return (
                       <span
                         key={eventId}
@@ -943,7 +943,7 @@ function InviteManager() {
             </h3>
             <p className="mt-3 font-sans text-sm leading-relaxed text-charcoal/70">
               This takes them off the invite list
-              {pendingDelete.party.length
+              {pendingDelete.party?.length
                 ? `, including ${pendingDelete.party.join(", ")}`
                 : ""}
               . You can add them again later if you need to.

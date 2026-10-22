@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { isCoupleAdmin } from "@/lib/hub/content";
 import { getGateSession, hasAdminCookie } from "@/lib/gate/auth";
 import { personIsSiteEditor } from "@/lib/editors/store";
-import { loadSiteContent, replaceSiteContent, resetSiteContent } from "@/lib/site-content/store";
+import { loadSiteContent, mergeSiteImages, replaceSiteContent, resetSiteContent } from "@/lib/site-content/store";
 import type { SiteContent } from "@/lib/site-content/types";
+
+export const dynamic = "force-dynamic";
 
 async function canPublishSite() {
   if (await hasAdminCookie()) return true;
@@ -28,9 +30,11 @@ export async function POST(request: Request) {
   }
   const body = (await request.json()) as Partial<SiteContent>;
   const current = await loadSiteContent();
+  const images = mergeSiteImages(current, body.siteImages, body.siteImageUpdatedAt);
   await replaceSiteContent({
-    siteCopy: body.siteCopy ?? {},
-    siteImages: body.siteImages ?? {},
+    siteCopy: { ...current.siteCopy, ...(body.siteCopy ?? {}) },
+    siteImages: images.siteImages,
+    siteImageUpdatedAt: images.siteImageUpdatedAt,
     siteHidden: Array.isArray(body.siteHidden) ? body.siteHidden : current.siteHidden,
     hiddenPages: Array.isArray(body.hiddenPages) ? body.hiddenPages : current.hiddenPages,
     heroImage: body.heroImage ?? current.heroImage,

@@ -144,7 +144,12 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
     const { songTitle, songArtist, songBy, ...rsvp } = record;
     setSaving(true);
     setError("");
-    const saved = await submitRsvp(rsvp);
+    let saved = false;
+    try {
+      saved = await submitRsvp(rsvp);
+    } catch {
+      saved = false;
+    }
     setSaving(false);
     if (!saved) {
       setError(t("rsvp.saveError"));
@@ -230,7 +235,9 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
                 />
               </label>
               <div className="mt-4 space-y-2">
-                {matches.map((record) => (
+                {matches.map((record) => {
+                  const party = Array.isArray(record.party) ? record.party : [];
+                  return (
                   <button
                     key={record.id}
                     type="button"
@@ -243,13 +250,14 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
                     <p className="mt-1 font-sans text-sm text-charcoal/65">
                       {record.location}
                       {record.inItaly ? ` · ${t("rsvp.italyGuest")}` : ""}
-                      {record.party?.length ? ` · ${t("rsvp.partyOf", { n: record.party.length + 1 })}` : ""}
+                      {party.length ? ` · ${t("rsvp.partyOf", { n: party.length + 1 })}` : ""}
                     </p>
-                    {record.party?.length ? (
-                      <p className="mt-1 font-sans text-xs text-taupe">{t("rsvp.with", { names: record.party.join(", ") })}</p>
+                    {party.length ? (
+                      <p className="mt-1 font-sans text-xs text-taupe">{t("rsvp.with", { names: party.join(", ") })}</p>
                     ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
               {query.length >= 2 && matches.length === 0 ? (
                 <p className="mt-4 font-sans text-sm text-taupe">
@@ -316,7 +324,7 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
           {currentKey === "events" ? (
             <div className="space-y-3">
               {allowedEvents.map((event) => {
-                const on = form.events.includes(event);
+                const on = (form.events ?? []).includes(event);
                 return (
                   <button
                     key={event}
@@ -324,7 +332,7 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
                     onClick={() =>
                       setForm({
                         ...form,
-                        events: on ? form.events.filter((item) => item !== event) : [...form.events, event],
+                        events: on ? (form.events ?? []).filter((item) => item !== event) : [...(form.events ?? []), event],
                       })
                     }
                     className={`w-full rounded-2xl border px-5 py-4 text-left ${on ? "border-forest bg-sage/15" : "border-taupe/20"}`}
@@ -340,7 +348,7 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
             <div className="space-y-3">
               <p className="font-sans text-sm text-charcoal/70">{t("rsvp.whoComing")}</p>
               {names.map((name) => {
-                const on = form.partyAttending.includes(name);
+                const on = (form.partyAttending ?? []).includes(name);
                 return (
                   <button
                     key={name}
@@ -455,8 +463,8 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
                 </label>
               )}
               <div className="flex justify-between"><dt>{t("rsvp.attending")}</dt><dd>{form.attending ? t("rsvp.yes") : t("rsvp.no")}</dd></div>
-              <div className="flex justify-between gap-6"><dt>{t("rsvp.party")}</dt><dd className="text-right">{form.partyAttending.join(", ") || form.name}</dd></div>
-              <div className="flex justify-between gap-6"><dt>{t("rsvp.events")}</dt><dd className="text-right">{form.events.map((e) => eventLabel(e)).join(", ")}</dd></div>
+              <div className="flex justify-between gap-6"><dt>{t("rsvp.party")}</dt><dd className="text-right">{(form.partyAttending ?? []).join(", ") || form.name}</dd></div>
+              <div className="flex justify-between gap-6"><dt>{t("rsvp.events")}</dt><dd className="text-right">{(form.events ?? []).map((e) => eventLabel(e)).join(", ")}</dd></div>
               {form.songTitle || form.songArtist ? (
                 <div className="flex justify-between gap-6">
                   <dt>{t("rsvp.song")}</dt>

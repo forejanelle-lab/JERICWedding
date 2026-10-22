@@ -3,6 +3,7 @@ import type { PhotoFolder, PhotoQuestion, PredictionQuestion, QuizQuestion } fro
 export type SiteContent = {
   siteCopy: Record<string, string>;
   siteImages: Record<string, string>;
+  siteImageUpdatedAt?: Record<string, number>;
   siteHidden: string[];
   hiddenPages: string[];
   heroImage: string;

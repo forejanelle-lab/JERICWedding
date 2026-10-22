@@ -28,7 +28,7 @@ export default function KnowUsPage() {
           intro="Six questions. Be honest. Points land on the wedding leaderboard if you've joined the community."
           questions={questions}
           pointsPerCorrect={50}
-          alreadyPlayed={state.completedGames.includes("know-us")}
+          alreadyPlayed={(state.completedGames ?? []).includes("know-us")}
           editId="play.know-us"
           onFinish={(_score, points) => addScore("know-us", points)}
         />

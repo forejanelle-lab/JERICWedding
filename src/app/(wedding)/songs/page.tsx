@@ -13,7 +13,11 @@ export default function SongsPage() {
   const [notice, setNotice] = useState("");
   const songs = state.songs
     .filter((song) => song.approved)
-    .sort((a, b) => b.ups.length - b.downs.length - (a.ups.length - a.downs.length));
+    .sort((a, b) => {
+      const score = (song: { ups?: string[]; downs?: string[] }) =>
+        (song.ups?.length ?? 0) - (song.downs?.length ?? 0);
+      return score(b) - score(a);
+    });
 
   useEffect(() => {
     fetch("/api/voter")
@@ -34,7 +38,7 @@ export default function SongsPage() {
     const song = state.songs.find((item) => item.id === id);
     if (!song) return;
     const already =
-      direction === "up" ? song.ups.includes(voterId) : song.downs.includes(voterId);
+      direction === "up" ? (song.ups ?? []).includes(voterId) : (song.downs ?? []).includes(voterId);
     if (already) {
       setNotice(t("songs.oneVote"));
       return;
@@ -83,8 +87,8 @@ export default function SongsPage() {
             {notice ? <p className="mb-5 font-sans text-sm text-olive">{notice}</p> : null}
             <ol className="space-y-3">
               {songs.map((song, index) => {
-                const mineUp = voterId ? song.ups.includes(voterId) : false;
-                const mineDown = voterId ? song.downs.includes(voterId) : false;
+                const mineUp = voterId ? (song.ups ?? []).includes(voterId) : false;
+                const mineDown = voterId ? (song.downs ?? []).includes(voterId) : false;
                 return (
                   <li key={song.id} className="soft-card flex items-center justify-between gap-4 px-5 py-4">
                     <div>
@@ -99,7 +103,7 @@ export default function SongsPage() {
                         className={`rounded-full border px-3 py-2 font-sans text-sm ${mineUp ? "border-forest bg-sage/20" : "border-taupe/20"}`}
                         onClick={() => vote(song.id, "up")}
                       >
-                        ▲ {song.ups.length}
+                        ▲ {(song.ups ?? []).length}
                       </button>
                       <button
                         type="button"
@@ -107,7 +111,7 @@ export default function SongsPage() {
                         className={`rounded-full border px-3 py-2 font-sans text-sm ${mineDown ? "border-taupe bg-beige/40" : "border-taupe/20"}`}
                         onClick={() => vote(song.id, "down")}
                       >
-                        ▼ {song.downs.length}
+                        ▼ {(song.downs ?? []).length}
                       </button>
                     </div>
                   </li>

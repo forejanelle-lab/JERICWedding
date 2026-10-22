@@ -13,7 +13,7 @@ export default function PredictionsPage() {
   const { t, has } = useI18n();
   const questions = state.predictionQuestions;
   const [answers, setAnswers] = useState<Record<string, string>>(state.predictions);
-  const [saved, setSaved] = useState(state.completedGames.includes("predictions"));
+  const [saved, setSaved] = useState((state.completedGames ?? []).includes("predictions"));
 
   if (canEditWebsite(state) && state.siteEditing) {
     return (
@@ -62,7 +62,7 @@ export default function PredictionsPage() {
                 </EditText>
               </legend>
               <div className="mt-3 grid gap-2">
-                {question.options.map((option, optionIndex) => {
+                {(question.options ?? []).map((option, optionIndex) => {
                   const optKey = `play.predictions.${question.id}.opt.${optionIndex}`;
                   return (
                   <label key={option} className="flex items-center gap-3 rounded-2xl border border-taupe/15 px-4 py-3 font-sans text-sm">

@@ -217,11 +217,12 @@ async function sendRsvpNotify(input: {
 }
 
 export async function syncRsvpToBrevo(input: RsvpBrevoInput) {
+  try {
   if (!apiKey()) {
     return { synced: false, sent: false, notified: false, error: "BREVO_API_KEY is not configured" };
   }
 
-  const email = input.email.trim().toLowerCase();
+  const email = String(input.email ?? "").trim().toLowerCase();
   const { firstName, lastName } = splitName(input.fullName, input.firstName, input.lastName);
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || input.fullName?.trim() || "Guest";
 
@@ -258,4 +259,12 @@ export async function syncRsvpToBrevo(input: RsvpBrevoInput) {
     notified: notify.sent,
     error,
   };
+  } catch (error) {
+    return {
+      synced: false,
+      sent: false,
+      notified: false,
+      error: error instanceof Error ? error.message : "RSVP email could not be sent.",
+    };
+  }
 }

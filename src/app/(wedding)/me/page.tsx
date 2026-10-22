@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const myRsvp = state.rsvps.find((item) => item.email === state.identity?.email);
   const myRides = state.rides.filter((ride) => ride.authorId === me.id);
   const myAsks = state.seatAsks.filter((ask) => ask.fromGuestId === me.id);
-  const saved = PLACES.filter((place) => state.savedPlaces.includes(place.id));
+  const saved = PLACES.filter((place) => (state.savedPlaces ?? []).includes(place.id));
   const myPoints = me.points;
 
   return (
@@ -58,7 +58,7 @@ export default function DashboardPage() {
             <p className="label-caps">{t("me.rsvp")}</p>
             <p className="mt-3 font-serif text-2xl">{myRsvp ? (myRsvp.attending ? t("me.confirmed") : t("me.regrets")) : t("me.notSubmitted")}</p>
             <ul className="mt-4 space-y-1 font-sans text-sm text-charcoal/70">
-              {me.events.map((event) => (
+              {(me.events ?? []).map((event) => (
                 <li key={event}>✓ {t(`event.${event}`)}</li>
               ))}
             </ul>

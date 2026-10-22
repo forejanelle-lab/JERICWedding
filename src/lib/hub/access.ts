@@ -132,10 +132,14 @@ export function viewerTags(state: HubState) {
   const email = String(identity.email ?? "").trim().toLowerCase();
   const first = String(identity.firstName ?? "").trim().toLowerCase();
   const last = String(identity.lastName ?? "").trim().toLowerCase();
+  const listed = (item: InviteRecord | undefined) => Boolean(item && item.invited !== false);
   const invite =
-    state.invites.find((item) => String(item.email ?? "").trim().toLowerCase() === email && email.length > 0) ??
+    state.invites.find(
+      (item) => listed(item) && email.length > 0 && String(item.email ?? "").trim().toLowerCase() === email,
+    ) ??
     state.invites.find(
       (item) =>
+        listed(item) &&
         String(item.firstName ?? "").trim().toLowerCase() === first &&
         (!last || String(item.lastName ?? "").trim().toLowerCase() === last),
     );

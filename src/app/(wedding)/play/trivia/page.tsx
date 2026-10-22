@@ -28,7 +28,7 @@ export default function TriviaPage() {
           intro="Italy, family, first dances, hidden talents. Incorrect answers still get a story."
           questions={questions}
           pointsPerCorrect={40}
-          alreadyPlayed={state.completedGames.includes("trivia")}
+          alreadyPlayed={(state.completedGames ?? []).includes("trivia")}
           editId="play.trivia"
           onFinish={(_score, points) => addScore("trivia", points)}
         />

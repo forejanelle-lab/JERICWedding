@@ -1,9 +1,9 @@
 import type { RsvpRecord } from "@/lib/hub/types";
 
 export function rsvpIdentityKey(rsvp: Pick<RsvpRecord, "email" | "name" | "inviteId">) {
-  const email = rsvp.email.trim().toLowerCase();
+  const email = String(rsvp.email ?? "").trim().toLowerCase();
   if (email) return `email:${email}`;
-  return `name:${rsvp.name.trim().toLowerCase()}|${rsvp.inviteId.trim().toLowerCase()}`;
+  return `name:${String(rsvp.name ?? "").trim().toLowerCase()}|${String(rsvp.inviteId ?? "").trim().toLowerCase()}`;
 }
 
 export function mergeRsvpLists(local: RsvpRecord[], remote: RsvpRecord[]) {
@@ -16,5 +16,5 @@ export function mergeRsvpLists(local: RsvpRecord[], remote: RsvpRecord[]) {
     byId.set(rsvp.id, rsvp);
     seen.add(key);
   }
-  return [...byId.values()].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+  return [...byId.values()].sort((a, b) => String(b.submittedAt ?? "").localeCompare(String(a.submittedAt ?? "")));
 }

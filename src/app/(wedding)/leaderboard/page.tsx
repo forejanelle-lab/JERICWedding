@@ -19,7 +19,7 @@ export default function LeaderboardPage() {
   const [cat, setCat] = useState<(typeof CATS)[number]["id"]>("overall");
 
   const rows = [...state.guests]
-    .filter((guest) => guest.visibility.showOnLeaderboard)
+    .filter((guest) => guest.visibility?.showOnLeaderboard)
     .map((guest) => {
       const extra = guest.id === state.identity?.guestId ? 0 : 0;
       const score =

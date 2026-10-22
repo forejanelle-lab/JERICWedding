@@ -45,6 +45,8 @@ import type { SiteEditor } from "@/lib/editors/match";
 import { fetchSharedInvites, syncSharedInvites } from "@/lib/invites/client";
 import { fetchSharedRsvps, syncSharedRsvp } from "@/lib/rsvp/client";
 import { mergeRsvpLists } from "@/lib/rsvp/merge";
+import { forgetGuestPhoto, loadCachedGuestPhotos, loadCachedSiteImages, rememberGuestPhoto, rememberSiteImage } from "@/lib/hub/image-cache";
+import { fetchSharedPhotos, removeSharedPhoto, syncGuestPhoto } from "@/lib/photos/client";
 import { fetchSiteContent, syncSiteContent } from "@/lib/site-content/client";
 import type { SiteContent } from "@/lib/site-content/types";
 import { collectHubEmails } from "@/lib/rides/emails";
@@ -52,23 +54,48 @@ import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 
 const STORAGE_KEY = "jeric-hub-v3";
 const DEFAULT_HERO = "/images/casale-bosco.jpg";
+const dirtySiteImages = new Set<string>();
+const siteImageTimes: Record<string, number> = {};
+const dirtyPhotoIds = new Set<string>();
+let queuedSiteContent = false;
+
+function withoutInlineImages(state: HubState): HubState {
+  return {
+    ...state,
+    siteImages: Object.fromEntries(
+      Object.entries(state.siteImages ?? {}).filter(([, src]) => !String(src).startsWith("data:")),
+    ),
+    photos: (state.photos ?? []).filter((photo) => !String(photo.src).startsWith("data:")).slice(0, 8),
+    guestbook: state.guestbook.map((note) => ({ ...note, photoDataUrl: undefined })),
+    identity: state.identity ? { ...state.identity, photoDataUrl: undefined } : null,
+  };
+}
 
 function persistHubState(state: HubState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    const trimmed: HubState = {
-      ...state,
-      photos: state.photos.filter((photo) => !photo.src.startsWith("data:")).slice(0, 8),
-      guestbook: state.guestbook.map((note) => ({ ...note, photoDataUrl: undefined })),
-      identity: state.identity ? { ...state.identity, photoDataUrl: undefined } : null,
-    };
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(withoutInlineImages(state)));
     } catch {
-      // Keep the in-memory upload for this visit if storage is full.
+      // The image cache keeps the photos when the main saved state is full.
     }
   }
+}
+
+function mergeGuestPhotoLists(current: GuestPhoto[], incoming: GuestPhoto[]) {
+  const byId = new Map<string, GuestPhoto>();
+  for (const photo of current) {
+    if (photo?.id && photo.src) byId.set(photo.id, photo);
+  }
+  for (const photo of incoming) {
+    if (!photo?.id || !photo.src || dirtyPhotoIds.has(photo.id)) continue;
+    byId.set(photo.id, photo);
+  }
+  for (const photo of incoming) {
+    if (photo?.id && photo.src && !byId.has(photo.id)) byId.set(photo.id, photo);
+  }
+  return [...byId.values()];
 }
 
 const EMPTY_STATE: HubState = {
@@ -108,12 +135,54 @@ const EMPTY_STATE: HubState = {
   accessTags: ACCESS_TAGS.map((tag) => ({ ...tag })),
 };
 
-function migrateSong(song: Song & { votes?: string[] }): Song {
+function migrateSong(song: Song & { votes?: string[] }): Song | null {
+  if (!song || typeof song !== "object") return null;
   return {
     ...song,
-    ups: song.ups ?? song.votes ?? [],
-    downs: song.downs ?? [],
+    title: String(song.title ?? ""),
+    artist: String(song.artist ?? ""),
+    ups: Array.isArray(song.ups) ? song.ups : Array.isArray(song.votes) ? song.votes : [],
+    downs: Array.isArray(song.downs) ? song.downs : [],
   };
+}
+
+function asStringList(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item ?? "").trim()).filter(Boolean) : [];
+}
+
+function normalizeLoadedGuest(guest: Guest): Guest | null {
+  if (!guest || typeof guest !== "object") return null;
+  const firstName = String(guest.firstName ?? "").trim();
+  if (!firstName) return null;
+  return {
+    ...guest,
+    firstName,
+    lastName: String(guest.lastName ?? "").trim(),
+    email: String(guest.email ?? ""),
+    city: String(guest.city ?? ""),
+    events: Array.isArray(guest.events) ? guest.events : ["welcome", "ceremony", "reception", "brunch"],
+    points: Number(guest.points) || 0,
+    visibility: { ...DEFAULT_VIS, ...(guest.visibility ?? {}) },
+  };
+}
+
+function normalizeLoadedRsvp(rsvp: RsvpRecord): RsvpRecord | null {
+  if (!rsvp || typeof rsvp !== "object" || !String(rsvp.name ?? "").trim()) return null;
+  return {
+    ...rsvp,
+    name: String(rsvp.name).trim(),
+    email: String(rsvp.email ?? "").trim(),
+    events: Array.isArray(rsvp.events) ? rsvp.events : [],
+    partyAttending: asStringList(rsvp.partyAttending),
+    inviteId: String(rsvp.inviteId ?? ""),
+    submittedAt: String(rsvp.submittedAt ?? ""),
+  };
+}
+
+function questionsWithOptions<T extends { options?: unknown }>(list: T[] | undefined, fallback: T[]) {
+  if (!Array.isArray(list) || !list.length) return fallback;
+  const cleaned = list.filter((item) => item && Array.isArray(item.options) && item.options.length);
+  return cleaned.length ? cleaned : fallback;
 }
 
 export function householdNames(invite: InviteRecord) {
@@ -135,9 +204,18 @@ function mergeInviteLists(local: InviteRecord[], remote: InviteRecord[]) {
 }
 
 function contentFromState(state: HubState): SiteContent {
+  const siteImages = Object.fromEntries(
+    Object.entries(state.siteImages ?? {}).filter(
+      ([id, src]) => Boolean(src) && (!String(src).startsWith("data:") || dirtySiteImages.has(id)),
+    ),
+  );
+  const siteImageUpdatedAt = Object.fromEntries(
+    Object.keys(siteImages).flatMap((id) => (siteImageTimes[id] ? [[id, siteImageTimes[id]] as const] : [])),
+  );
   return {
     siteCopy: state.siteCopy,
-    siteImages: state.siteImages,
+    siteImages,
+    siteImageUpdatedAt,
     siteHidden: state.siteHidden,
     hiddenPages: state.hiddenPages ?? [],
     heroImage: state.heroImage,
@@ -173,8 +251,16 @@ function chooseGameQuestions(
 }
 
 function publishSiteContent(state: HubState) {
-  if (!siteContentReady) return;
-  void syncSiteContent(contentFromState(state));
+  if (!siteContentReady) {
+    queuedSiteContent = true;
+    return;
+  }
+  queuedSiteContent = false;
+  const pending = new Set(dirtySiteImages);
+  void syncSiteContent(contentFromState(state)).then((saved) => {
+    if (!saved) return;
+    for (const id of pending) dirtySiteImages.delete(id);
+  });
 }
 
 function commitPhotoFolders(prev: HubState, photoFolders: PhotoFolder[]) {
@@ -197,6 +283,7 @@ export function lookupInvites(invites: InviteRecord[], query: string) {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
   return invites.filter((invite) => {
+    if (!invite || invite.invited === false) return false;
     const names = householdNames(invite).map((name) => name.toLowerCase());
     return names.some((name) => {
       if (name.includes(q)) return true;
@@ -211,7 +298,9 @@ function uid(prefix: string) {
 }
 
 function displayName(guest: Pick<Guest, "firstName" | "lastName">) {
-  return `${guest.firstName} ${guest.lastName.charAt(0)}.`;
+  const first = String(guest.firstName ?? "").trim();
+  const last = String(guest.lastName ?? "").trim();
+  return last ? `${first} ${last.charAt(0)}.` : first;
 }
 
 type HubContextValue = {
@@ -331,6 +420,16 @@ export function HubProvider({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+    const [cachedImages, cachedPhotos] = await Promise.all([loadCachedSiteImages(), loadCachedGuestPhotos()]);
+    if (cancelled) return;
+    const cachedSiteImages = Object.fromEntries(
+      Object.entries(cachedImages).map(([id, image]) => {
+        siteImageTimes[id] = Math.max(siteImageTimes[id] ?? 0, image.updatedAt);
+        return [id, image.src];
+      }),
+    );
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -338,63 +437,97 @@ export function HubProvider({
         setState({
           ...EMPTY_STATE,
           ...parsed,
-          guests: Array.isArray(parsed.guests) ? parsed.guests : [],
-          songs: (Array.isArray(parsed.songs) ? parsed.songs : []).map((song) =>
-            migrateSong(song as Song & { votes?: string[] }),
-          ),
+          guests: (Array.isArray(parsed.guests) ? parsed.guests : []).flatMap((guest) => {
+            const next = normalizeLoadedGuest(guest);
+            return next ? [next] : [];
+          }),
+          songs: (Array.isArray(parsed.songs) ? parsed.songs : []).flatMap((song) => {
+            const next = migrateSong(song as Song & { votes?: string[] });
+            return next ? [next] : [];
+          }),
           rides: Array.isArray(parsed.rides) ? parsed.rides : [],
           seatAsks: Array.isArray(parsed.seatAsks) ? parsed.seatAsks : [],
           messages: Array.isArray(parsed.messages) ? parsed.messages : [],
           guestbook: Array.isArray(parsed.guestbook) ? parsed.guestbook : [],
-          photos: Array.isArray(parsed.photos) ? parsed.photos : [],
+          photos: mergeGuestPhotoLists(Array.isArray(parsed.photos) ? parsed.photos : [], cachedPhotos),
           photoFolders: normalizePhotoFolders(parsed.photoFolders),
           announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
-          rsvps: Array.isArray(parsed.rsvps) ? parsed.rsvps : [],
+          rsvps: (Array.isArray(parsed.rsvps) ? parsed.rsvps : []).flatMap((rsvp) => {
+            const next = normalizeLoadedRsvp(rsvp);
+            return next ? [next] : [];
+          }),
+          savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : [],
+          completedGames: Array.isArray(parsed.completedGames) ? parsed.completedGames : [],
+          gameScores: parsed.gameScores && typeof parsed.gameScores === "object" ? parsed.gameScores : {},
+          predictions: parsed.predictions && typeof parsed.predictions === "object" ? parsed.predictions : {},
           heroImage:
             !parsed.heroImage || parsed.heroImage === "/images/amalfi-coast.jpg"
               ? DEFAULT_HERO
               : parsed.heroImage,
-          siteCopy: parsed.siteCopy ?? {},
-          siteImages: parsed.siteImages ?? {},
-          siteHidden: parsed.siteHidden ?? [],
-          hiddenPages: parsed.hiddenPages ?? [],
-          siteEditing: false,
-          invites: (Array.isArray(parsed.invites) ? parsed.invites : []).map((invite) => ({
-            ...invite,
-            firstName: String(invite.firstName ?? "").trim(),
-            lastName: String(invite.lastName ?? "").trim(),
-            email: String(invite.email ?? "").trim(),
-            address: String(invite.address ?? "").trim(),
-            party: Array.isArray(invite.party) ? invite.party.map((name) => String(name ?? "").trim()).filter(Boolean) : [],
-            tags: invite.tags?.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
-            invited: invite.invited !== false,
-            entered: Boolean(invite.entered),
-            canEditSite: Boolean(invite.canEditSite),
-          })),
-          gameQuestions: {
-            "know-us": parsed.gameQuestions?.["know-us"]?.length ? parsed.gameQuestions["know-us"] : KNOW_US_QUESTIONS,
-            trivia: parsed.gameQuestions?.trivia?.length ? parsed.gameQuestions.trivia : TRIVIA_QUESTIONS,
+          siteCopy: parsed.siteCopy && typeof parsed.siteCopy === "object" ? parsed.siteCopy : {},
+          siteImages: {
+            ...(parsed.siteImages && typeof parsed.siteImages === "object" ? parsed.siteImages : {}),
+            ...cachedSiteImages,
           },
-          photoQuestions: parsed.photoQuestions?.length ? parsed.photoQuestions : PHOTO_QUESTIONS,
-          predictionQuestions: parsed.predictionQuestions?.length ? parsed.predictionQuestions : PREDICTION_QUESTIONS,
+          siteHidden: Array.isArray(parsed.siteHidden) ? parsed.siteHidden : [],
+          hiddenPages: Array.isArray(parsed.hiddenPages) ? parsed.hiddenPages : [],
+          siteEditing: false,
+          invites: (Array.isArray(parsed.invites) ? parsed.invites : []).flatMap((invite) => {
+            if (!invite || typeof invite !== "object") return [];
+            const invited = invite.invited !== false;
+            const tags = Array.isArray(invite.tags) ? invite.tags.map(String).filter(Boolean) : [];
+            return [
+              {
+                ...invite,
+                firstName: String(invite.firstName ?? "").trim(),
+                lastName: String(invite.lastName ?? "").trim(),
+                email: String(invite.email ?? "").trim(),
+                address: String(invite.address ?? "").trim(),
+                party: asStringList(invite.party),
+                events: Array.isArray(invite.events) ? invite.events : [],
+                tags: tags.length ? tags : invited ? [...DEFAULT_GUEST_TAGS] : [],
+                invited,
+                entered: Boolean(invite.entered),
+                canEditSite: Boolean(invite.canEditSite),
+              },
+            ];
+          }),
+          gameQuestions: {
+            "know-us": questionsWithOptions(parsed.gameQuestions?.["know-us"], KNOW_US_QUESTIONS),
+            trivia: questionsWithOptions(parsed.gameQuestions?.trivia, TRIVIA_QUESTIONS),
+          },
+          photoQuestions: questionsWithOptions(parsed.photoQuestions, PHOTO_QUESTIONS),
+          predictionQuestions: questionsWithOptions(parsed.predictionQuestions, PREDICTION_QUESTIONS),
           eventAccess: { ...EVENT_ACCESS, ...parsed.eventAccess },
           pageAccess: { ...PAGE_ACCESS, ...parsed.pageAccess },
           accessTags: parsed.accessTags?.length ? parsed.accessTags : ACCESS_TAGS.map((tag) => ({ ...tag })),
           adminAuthed: parsed.identity
-            ? isCoupleAdmin(parsed.identity.firstName, parsed.identity.email, parsed.identity.lastName)
+            ? isCoupleAdmin(
+                String(parsed.identity.firstName ?? ""),
+                String(parsed.identity.email ?? ""),
+                String(parsed.identity.lastName ?? ""),
+              )
             : Boolean(parsed.adminAuthed || adminFromServer),
           siteEditor: Boolean(
             parsed.siteEditor ||
               identityCanEditSite(parsed.identity, Array.isArray(parsed.invites) ? parsed.invites : []),
           ),
         });
-      } else if (adminFromServer) {
-        setState({ ...EMPTY_STATE, adminAuthed: true });
+      } else if (adminFromServer || cachedPhotos.length || Object.keys(cachedSiteImages).length) {
+        setState({ ...EMPTY_STATE, adminAuthed: adminFromServer, photos: cachedPhotos, siteImages: cachedSiteImages });
       }
     } catch {
-      setState(adminFromServer ? { ...EMPTY_STATE, adminAuthed: true } : EMPTY_STATE);
+      setState(
+        adminFromServer || cachedPhotos.length || Object.keys(cachedSiteImages).length
+          ? { ...EMPTY_STATE, adminAuthed: adminFromServer, photos: cachedPhotos, siteImages: cachedSiteImages }
+          : EMPTY_STATE,
+      );
     }
-    setReady(true);
+    if (!cancelled) setReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [adminFromServer]);
 
   useEffect(() => {
@@ -409,7 +542,7 @@ export function HubProvider({
       if (cancelled) return;
       setState((prev) => {
         if (!remote.length) {
-          if (prev.invites.length) void syncSharedInvites(prev.invites);
+          if (prev.adminAuthed && prev.invites.length) void syncSharedInvites(prev.invites);
           return prev;
         }
         const invites = mergeInviteLists(prev.invites, remote);
@@ -455,19 +588,44 @@ export function HubProvider({
       if (cancelled || !remote) return;
       siteContentReady = true;
       setState((prev) => {
-        const gameQuestions = chooseGameQuestions(remote.gameQuestions, prev.gameQuestions);
-        const photoQuestions = chooseSavedList(remote.photoQuestions, prev.photoQuestions, PHOTO_QUESTIONS);
-        const predictionQuestions = chooseSavedList(
-          remote.predictionQuestions,
-          prev.predictionQuestions,
+        const chosenGames = chooseGameQuestions(remote.gameQuestions, prev.gameQuestions);
+        const gameQuestions = {
+          ...chosenGames,
+          "know-us": questionsWithOptions(chosenGames["know-us"], KNOW_US_QUESTIONS),
+          trivia: questionsWithOptions(chosenGames.trivia, TRIVIA_QUESTIONS),
+        };
+        const photoQuestions = questionsWithOptions(
+          chooseSavedList(remote.photoQuestions, prev.photoQuestions, PHOTO_QUESTIONS),
+          PHOTO_QUESTIONS,
+        );
+        const predictionQuestions = questionsWithOptions(
+          chooseSavedList(remote.predictionQuestions, prev.predictionQuestions, PREDICTION_QUESTIONS),
           PREDICTION_QUESTIONS,
         );
+        const remoteImages =
+          remote.siteImages && typeof remote.siteImages === "object" ? remote.siteImages : {};
+        const remoteTimes = remote.siteImageUpdatedAt ?? {};
+        const siteImages = { ...prev.siteImages };
+        for (const [id, src] of Object.entries(remoteImages)) {
+          if (!src || dirtySiteImages.has(id)) continue;
+          const remoteAt = Number(remoteTimes[id] ?? 0);
+          const localAt = Number(siteImageTimes[id] ?? 0);
+          if (!siteImages[id] || remoteAt >= localAt) {
+            siteImages[id] = src;
+            if (remoteAt) siteImageTimes[id] = remoteAt;
+          }
+        }
+        for (const [id, src] of Object.entries(siteImages)) {
+          const localAt = Number(siteImageTimes[id] ?? 0);
+          const remoteAt = Number(remoteTimes[id] ?? 0);
+          if (String(src).startsWith("data:") && (!remoteImages[id] || localAt > remoteAt)) dirtySiteImages.add(id);
+        }
         const next = {
           ...prev,
           siteCopy: { ...remote.siteCopy, ...prev.siteCopy },
-          siteImages: { ...remote.siteImages, ...prev.siteImages },
-          siteHidden: remote.siteHidden ?? [],
-          hiddenPages: remote.hiddenPages ?? [],
+          siteImages,
+          siteHidden: Array.isArray(remote.siteHidden) ? remote.siteHidden : [],
+          hiddenPages: Array.isArray(remote.hiddenPages) ? remote.hiddenPages : [],
           heroImage:
             prev.heroImage && prev.heroImage !== DEFAULT_HERO ? prev.heroImage : remote.heroImage || prev.heroImage,
           photoFolders: mergePhotoFolders(remote.photoFolders, prev.photoFolders),
@@ -476,6 +634,8 @@ export function HubProvider({
           predictionQuestions,
         };
         const shouldShare =
+          queuedSiteContent ||
+          dirtySiteImages.size > 0 ||
           (!sameJson(gameQuestions, remote.gameQuestions) &&
             !sameJson(gameQuestions, { "know-us": KNOW_US_QUESTIONS, trivia: TRIVIA_QUESTIONS })) ||
           (!sameJson(photoQuestions, remote.photoQuestions) && !sameJson(photoQuestions, PHOTO_QUESTIONS)) ||
@@ -483,6 +643,26 @@ export function HubProvider({
             !sameJson(predictionQuestions, PREDICTION_QUESTIONS));
         if (shouldShare) publishSiteContent(next);
         return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    void fetchSharedPhotos().then((remote) => {
+      if (cancelled) return;
+      setState((prev) => {
+        for (const photo of prev.photos) {
+          if (remote.some((item) => item.id === photo.id)) continue;
+          dirtyPhotoIds.add(photo.id);
+          void rememberGuestPhoto(photo);
+          void syncGuestPhoto(photo);
+        }
+        return { ...prev, photos: mergeGuestPhotoLists(prev.photos, remote) };
       });
     });
     return () => {
@@ -627,13 +807,17 @@ export function HubProvider({
   }, []);
 
   const signOut = useCallback(async () => {
-    setState((prev) => ({
-      ...prev,
-      identity: null,
-      adminAuthed: false,
-      siteEditor: false,
-      siteEditing: false,
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        identity: null,
+        adminAuthed: false,
+        siteEditor: false,
+        siteEditing: false,
+      };
+      persistHubState(next);
+      return next;
+    });
     await clearAdminCookie();
     await clearGateCookie();
     window.location.assign("/");
@@ -669,9 +853,9 @@ export function HubProvider({
     const value = address.trim();
     setState((prev) => {
       if (!prev.identity) return prev;
-      const email = prev.identity.email.trim().toLowerCase();
-      const first = prev.identity.firstName.trim().toLowerCase();
-      const last = prev.identity.lastName.trim().toLowerCase();
+      const email = String(prev.identity.email ?? "").trim().toLowerCase();
+      const first = String(prev.identity.firstName ?? "").trim().toLowerCase();
+      const last = String(prev.identity.lastName ?? "").trim().toLowerCase();
       const full = `${first} ${last}`.trim();
       const samePerson = (invite: InviteRecord) => {
         if (email && String(invite.email ?? "").trim().toLowerCase() === email) return true;
@@ -922,21 +1106,23 @@ export function HubProvider({
       ...prev,
       songs: prev.songs.map((song) => {
         if (song.id !== id || !song.approved) return song;
-        const inUp = song.ups.includes(voterId);
-        const inDown = song.downs.includes(voterId);
+        const ups = Array.isArray(song.ups) ? song.ups : [];
+        const downs = Array.isArray(song.downs) ? song.downs : [];
+        const inUp = ups.includes(voterId);
+        const inDown = downs.includes(voterId);
         if (direction === "up") {
           if (inUp) return song;
           return {
             ...song,
-            ups: [...song.ups, voterId],
-            downs: song.downs.filter((item) => item !== voterId),
+            ups: [...ups, voterId],
+            downs: downs.filter((item) => item !== voterId),
           };
         }
         if (inDown) return song;
         return {
           ...song,
-          downs: [...song.downs, voterId],
-          ups: song.ups.filter((item) => item !== voterId),
+          downs: [...downs, voterId],
+          ups: ups.filter((item) => item !== voterId),
         };
       }),
     }));
@@ -1044,47 +1230,33 @@ export function HubProvider({
       location?: string;
       fromList: boolean;
     }) => {
-      const email = input.email.trim().toLowerCase();
-      const first = input.firstName.trim();
-      const last = input.lastName.trim();
+      const email = String(input.email ?? "").trim().toLowerCase();
+      const first = String(input.firstName ?? "").trim();
+      const last = String(input.lastName ?? "").trim();
       if (!first) return;
       setState((prev) => {
         const samePerson = (invite: InviteRecord) => {
+          if (!invite) return false;
           if (input.inviteId && invite.id === input.inviteId) return true;
-          if (email && invite.email && invite.email.trim().toLowerCase() === email) return true;
-          if (
-            invite.firstName.trim().toLowerCase() === first.toLowerCase() &&
-            (!last || invite.lastName.trim().toLowerCase() === last.toLowerCase())
-          ) {
-            return true;
-          }
+          const inviteEmail = String(invite.email ?? "").trim().toLowerCase();
+          if (email && inviteEmail && inviteEmail === email) return true;
+          const inviteFirst = String(invite.firstName ?? "").trim().toLowerCase();
+          const inviteLast = String(invite.lastName ?? "").trim().toLowerCase();
+          if (inviteFirst === first.toLowerCase() && (!last || inviteLast === last.toLowerCase())) return true;
           const household = householdNames(invite).map((name) => name.toLowerCase());
           const full = `${first} ${last}`.trim().toLowerCase();
           return Boolean(full && household.includes(full));
         };
 
-        if (input.fromList) {
-          const index = prev.invites.findIndex(samePerson);
-          if (index < 0) return prev;
+        const index = prev.invites.findIndex(samePerson);
+        if (index >= 0) {
+          const current = prev.invites[index];
+          const nextEmail = email || current.email;
+          if (current.entered && nextEmail === current.email) return prev;
           return {
             ...prev,
             invites: prev.invites.map((invite, i) =>
-              i === index ? { ...invite, email: email || invite.email, entered: true } : invite,
-            ),
-          };
-        }
-
-        const walkIndex = prev.invites.findIndex(
-          (invite) =>
-            invite.invited === false &&
-            invite.firstName.trim().toLowerCase() === first.toLowerCase() &&
-            invite.lastName.trim().toLowerCase() === last.toLowerCase(),
-        );
-        if (walkIndex >= 0) {
-          return {
-            ...prev,
-            invites: prev.invites.map((invite, i) =>
-              i === walkIndex ? { ...invite, email: email || invite.email, entered: true } : invite,
+              i === index ? { ...invite, email: nextEmail, entered: true } : invite,
             ),
           };
         }
@@ -1138,24 +1310,48 @@ export function HubProvider({
         approved: true,
         createdAt: new Date().toISOString(),
       };
+      dirtyPhotoIds.add(photo.id);
+      void rememberGuestPhoto(photo);
+      void syncGuestPhoto(photo);
       return { ...prev, photos: [photo, ...prev.photos] };
     });
   }, []);
 
+  const sharePhotoChange = (photo: GuestPhoto | undefined) => {
+    if (!photo) return;
+    dirtyPhotoIds.add(photo.id);
+    void rememberGuestPhoto(photo);
+    void syncGuestPhoto(photo);
+  };
+
   const moderatePhoto = useCallback((id: string, approved: boolean) => {
-    setState((prev) => ({
-      ...prev,
-      photos: approved
-        ? prev.photos.map((photo) => (photo.id === id ? { ...photo, approved: true } : photo))
-        : prev.photos.filter((photo) => photo.id !== id),
-    }));
+    setState((prev) => {
+      const current = prev.photos.find((photo) => photo.id === id);
+      if (!approved) {
+        dirtyPhotoIds.delete(id);
+        void forgetGuestPhoto(id);
+        void removeSharedPhoto(id);
+        return { ...prev, photos: prev.photos.filter((photo) => photo.id !== id) };
+      }
+      const next = current ? { ...current, approved: true } : undefined;
+      sharePhotoChange(next);
+      return {
+        ...prev,
+        photos: next ? prev.photos.map((photo) => (photo.id === id ? next : photo)) : prev.photos,
+      };
+    });
   }, []);
 
   const updatePhotoCaption = useCallback((id: string, caption: string) => {
-    setState((prev) => ({
-      ...prev,
-      photos: prev.photos.map((photo) => (photo.id === id ? { ...photo, caption } : photo)),
-    }));
+    setState((prev) => {
+      const next = prev.photos.find((photo) => photo.id === id);
+      const updated = next ? { ...next, caption } : undefined;
+      sharePhotoChange(updated);
+      return {
+        ...prev,
+        photos: updated ? prev.photos.map((photo) => (photo.id === id ? updated : photo)) : prev.photos,
+      };
+    });
   }, []);
 
   const updatePhotoAlbum = useCallback((id: string, album: PhotoAlbum) => {
@@ -1165,9 +1361,11 @@ export function HubProvider({
       const allowed = prev.identity?.guestId === photo.authorId || prev.adminAuthed;
       if (!allowed) return prev;
       if (!prev.photoFolders.some((folder) => folder.id === album)) return prev;
+      const updated = { ...photo, album };
+      sharePhotoChange(updated);
       return {
         ...prev,
-        photos: prev.photos.map((item) => (item.id === id ? { ...item, album } : item)),
+        photos: prev.photos.map((item) => (item.id === id ? updated : item)),
       };
     });
   }, []);
@@ -1212,22 +1410,24 @@ export function HubProvider({
       if (!photo) return prev;
       const allowed = prev.identity?.guestId === photo.authorId || prev.adminAuthed;
       if (!allowed) return prev;
+      dirtyPhotoIds.delete(id);
+      void forgetGuestPhoto(id);
+      void removeSharedPhoto(id);
       return { ...prev, photos: prev.photos.filter((item) => item.id !== id) };
     });
   }, []);
 
   const savePlace = useCallback((id: string) => {
     setState((prev) => {
-      const savedPlaces = prev.savedPlaces.includes(id)
-        ? prev.savedPlaces.filter((item) => item !== id)
-        : [...prev.savedPlaces, id];
+      const current = Array.isArray(prev.savedPlaces) ? prev.savedPlaces : [];
+      const savedPlaces = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
       return { ...prev, savedPlaces };
     });
   }, []);
 
   const addScore = useCallback((gameId: string, points: number) => {
     setState((prev) => {
-      if (prev.completedGames.includes(gameId)) return prev;
+      if ((prev.completedGames ?? []).includes(gameId)) return prev;
       const nextPoints = (prev.gameScores[gameId] ?? 0) + points;
       return {
         ...prev,
@@ -1246,7 +1446,7 @@ export function HubProvider({
 
   const savePredictions = useCallback((answers: Record<string, string>) => {
     setState((prev) => {
-      if (prev.completedGames.includes("predictions")) {
+      if ((prev.completedGames ?? []).includes("predictions")) {
         return { ...prev, predictions: answers };
       }
       return {
@@ -1264,8 +1464,8 @@ export function HubProvider({
   }, []);
 
   const submitRsvp = useCallback(async (record: Omit<RsvpRecord, "id" | "submittedAt">) => {
-    const email = record.email.trim() || state.identity?.email?.trim() || "";
-    const nameParts = record.name.trim().split(/\s+/).filter(Boolean);
+    const email = String(record.email ?? "").trim() || String(state.identity?.email ?? "").trim();
+    const nameParts = String(record.name ?? "").trim().split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || state.identity?.firstName || "";
     const lastName = nameParts.slice(1).join(" ") || state.identity?.lastName || "";
     const rsvp: RsvpRecord = {
@@ -1276,28 +1476,49 @@ export function HubProvider({
       submittedAt: new Date().toISOString(),
     };
     setState((prev) => {
-      const events = record.attending ? record.events : [];
+      const events = record.attending && Array.isArray(record.events) ? record.events : [];
       const nameKey = `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}`;
       const emailKey = email.trim().toLowerCase();
       const hasInvite = prev.invites.some((invite) => {
-        if (record.inviteId && !record.inviteId.startsWith("new-") && invite.id === record.inviteId) return true;
+        if (record.inviteId && !String(record.inviteId).startsWith("new-") && invite.id === record.inviteId) return true;
         if (emailKey && String(invite.email ?? "").trim().toLowerCase() === emailKey) return true;
         return `${String(invite.firstName ?? "").trim().toLowerCase()}|${String(invite.lastName ?? "").trim().toLowerCase()}` === nameKey;
       });
+      const party = rsvp.partyAttending.filter(
+        (name) => String(name).trim().toLowerCase() !== String(rsvp.name ?? "").trim().toLowerCase(),
+      );
+      const nextEvents = (events.length ? events : ["welcome", "ceremony", "reception", "brunch"]) as EventId[];
+      const matchesInvite = (invite: InviteRecord) => {
+        if (record.inviteId && !String(record.inviteId).startsWith("new-") && invite.id === record.inviteId) return true;
+        if (emailKey && String(invite.email ?? "").trim().toLowerCase() === emailKey) return true;
+        return `${String(invite.firstName ?? "").trim().toLowerCase()}|${String(invite.lastName ?? "").trim().toLowerCase()}` === nameKey;
+      };
       const invites: InviteRecord[] = hasInvite
-        ? prev.invites
+        ? prev.invites.map((invite) =>
+            matchesInvite(invite)
+              ? {
+                  ...invite,
+                  email: email || invite.email,
+                  party: party.length ? party : invite.party,
+                  events: record.attending ? nextEvents : invite.events,
+                  tags: Array.isArray(invite.tags) && invite.tags.length ? invite.tags : [...DEFAULT_GUEST_TAGS],
+                  invited: record.attending ? true : invite.invited !== false,
+                  entered: true,
+                }
+              : invite,
+          )
         : [
             {
-              id: record.inviteId.startsWith("new-") || !record.inviteId ? uid("inv") : record.inviteId,
+              id: record.inviteId && !String(record.inviteId).startsWith("new-") ? record.inviteId : uid("inv"),
               firstName: firstName || "Guest",
               lastName,
               email,
               location: "",
               inItaly: false,
-              party: rsvp.partyAttending.filter((name) => name.trim().toLowerCase() !== rsvp.name.trim().toLowerCase()),
-              events: (events.length ? events : ["welcome", "ceremony", "reception", "brunch"]) as EventId[],
-              tags: [...DEFAULT_GUEST_TAGS],
-              invited: true,
+              party,
+              events: record.attending ? nextEvents : [],
+              tags: record.attending ? [...DEFAULT_GUEST_TAGS] : [],
+              invited: Boolean(record.attending),
               entered: true,
             },
             ...prev.invites,
@@ -1344,7 +1565,7 @@ export function HubProvider({
   }, [state.identity]);
 
   const updateRsvp = useCallback((rsvp: RsvpRecord) => {
-    const nameParts = rsvp.name.trim().split(/\s+/).filter(Boolean);
+    const nameParts = String(rsvp.name ?? "").trim().split(/\s+/).filter(Boolean);
     setState((prev) => {
       const exists = prev.rsvps.some((item) => item.id === rsvp.id);
       return {
@@ -1479,7 +1700,7 @@ export function HubProvider({
   }, []);
 
   const logoutAdmin = useCallback(() => {
-    setState((prev) => ({ ...prev, adminAuthed: false }));
+    setState((prev) => (prev.adminAuthed ? { ...prev, adminAuthed: false } : prev));
     void clearAdminCookie();
   }, []);
 
@@ -1492,11 +1713,15 @@ export function HubProvider({
   }, []);
 
   const updateSiteImage = useCallback((id: string, src: string) => {
+    const updatedAt = Date.now();
+    siteImageTimes[id] = updatedAt;
+    dirtySiteImages.add(id);
+    void rememberSiteImage(id, src, updatedAt);
     setState((prev) => {
       const next = {
         ...prev,
         siteImages: { ...prev.siteImages, [id]: src },
-        siteHidden: prev.siteHidden.filter((item) => item !== id),
+        siteHidden: (prev.siteHidden ?? []).filter((item) => item !== id),
       };
       publishSiteContent(next);
       return next;

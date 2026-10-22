@@ -29,10 +29,10 @@ export const OPTIONAL_GUEST_CODE = "JF2027";
 const COUPLE_EMAILS = new Set(["janellefore98@gmail.com", "emperorpenguin0522@gmail.com"]);
 
 export function isCoupleAdmin(firstName: string, email = "", lastName = "") {
-  const mail = email.trim().toLowerCase();
+  const mail = String(email ?? "").trim().toLowerCase();
   if (COUPLE_EMAILS.has(mail)) return true;
-  const first = firstName.trim().toLowerCase();
-  const last = lastName.trim().toLowerCase();
+  const first = String(firstName ?? "").trim().toLowerCase();
+  const last = String(lastName ?? "").trim().toLowerCase();
   return first === "janelle" && last === "fore";
 }
 

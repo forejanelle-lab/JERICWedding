@@ -48,11 +48,41 @@ function asGameQuestions(value: unknown): Record<string, QuizQuestion[]> | undef
   return entries.length ? Object.fromEntries(entries) : undefined;
 }
 
+function asTimes(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).flatMap(([key, time]) => {
+      const stamp = Number(time);
+      return Number.isFinite(stamp) ? [[key, stamp] as const] : [];
+    }),
+  );
+}
+
+export function mergeSiteImages(
+  current: SiteContent,
+  incomingImages: Record<string, string> | undefined,
+  incomingTimes: Record<string, number> | undefined,
+) {
+  const siteImages = { ...current.siteImages };
+  const siteImageUpdatedAt = { ...(current.siteImageUpdatedAt ?? {}) };
+  for (const [id, src] of Object.entries(incomingImages ?? {})) {
+    if (!src) continue;
+    const at = Number(incomingTimes?.[id] ?? 0);
+    const prevAt = Number(siteImageUpdatedAt[id] ?? 0);
+    if (!siteImages[id] || at >= prevAt) {
+      siteImages[id] = src;
+      if (at) siteImageUpdatedAt[id] = at;
+    }
+  }
+  return { siteImages, siteImageUpdatedAt };
+}
+
 function normalizeStore(raw: unknown): SiteContent {
   const value = (raw ?? {}) as Partial<SiteContent>;
   return {
     siteCopy: asRecord(value.siteCopy),
     siteImages: asRecord(value.siteImages),
+    siteImageUpdatedAt: asTimes(value.siteImageUpdatedAt),
     siteHidden: Array.isArray(value.siteHidden) ? value.siteHidden.map(String) : [],
     hiddenPages: Array.isArray(value.hiddenPages) ? value.hiddenPages.map(String) : [],
     heroImage: typeof value.heroImage === "string" && value.heroImage ? value.heroImage : DEFAULT_HERO,
