@@ -326,19 +326,23 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
               {allowedEvents.map((event) => {
                 const on = (form.events ?? []).includes(event);
                 return (
-                  <button
+                  <label
                     key={event}
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        ...form,
-                        events: on ? (form.events ?? []).filter((item) => item !== event) : [...(form.events ?? []), event],
-                      })
-                    }
-                    className={`w-full rounded-2xl border px-5 py-4 text-left ${on ? "border-forest bg-sage/15" : "border-taupe/20"}`}
+                    className={`flex w-full cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 text-left ${on ? "border-forest bg-sage/15" : "border-taupe/20"}`}
                   >
-                    {eventLabel(event)}
-                  </button>
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 shrink-0 accent-forest"
+                      checked={on}
+                      onChange={() =>
+                        setForm({
+                          ...form,
+                          events: on ? (form.events ?? []).filter((item) => item !== event) : [...(form.events ?? []), event],
+                        })
+                      }
+                    />
+                    <span className="font-sans text-charcoal">{eventLabel(event)}</span>
+                  </label>
                 );
               })}
             </div>
