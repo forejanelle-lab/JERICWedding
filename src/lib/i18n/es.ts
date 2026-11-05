@@ -313,6 +313,8 @@ export const es: Record<string, string> = {
   "rsvp.yes": "Sí",
   "rsvp.no": "No",
   "rsvp.whoComing": "¿Quién de tu grupo viene?",
+  "rsvp.addGuest": "Agregar a alguien más",
+  "rsvp.addGuestPh": "Escribe un nombre",
   "rsvp.dietary": "Restricciones alimentarias",
   "rsvp.dietaryPh": "Vegetariano, sin mariscos...",
   "rsvp.song": "Canción pedida",

@@ -74,6 +74,7 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
     stay: "" as StayArea | "",
     inviteId: "",
     partyAttending: [] as string[],
+    extraGuest: "",
   });
 
   const stepKeys = [
@@ -161,7 +162,20 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
     setDone(true);
   }
 
+  function partyWithExtra(current = form) {
+    const name = current.extraGuest.trim();
+    const party = current.partyAttending ?? [];
+    if (!name || party.some((item) => item.toLowerCase() === name.toLowerCase())) return party;
+    return [...party, name];
+  }
+
   function next() {
+    if (currentKey === "party") {
+      const partyAttending = partyWithExtra();
+      if (partyAttending !== form.partyAttending || form.extraGuest) {
+        setForm({ ...form, partyAttending, extraGuest: "" });
+      }
+    }
     if ((step === 1 && !form.attending) || step >= stepKeys.length - 1) {
       if (!hasEmail(form.email)) return;
     }
@@ -170,7 +184,8 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
       return;
     }
     if (step >= stepKeys.length - 1) {
-      finishRsvp(rsvpPayload({ guestCount: form.partyAttending.length || form.guestCount }));
+      const partyAttending = partyWithExtra();
+      finishRsvp(rsvpPayload({ guestCount: partyAttending.length || form.guestCount, partyAttending }));
       return;
     }
     setStep((value) => value + 1);
@@ -351,26 +366,51 @@ export function RsvpWizard({ initialName = "" }: { initialName?: string }) {
           {currentKey === "party" ? (
             <div className="space-y-3">
               <p className="font-sans text-sm text-charcoal/70">{t("rsvp.whoComing")}</p>
-              {names.map((name) => {
+              {[...names, ...(form.partyAttending ?? []).filter((name) => !names.some((item) => item.toLowerCase() === name.toLowerCase()))].map((name) => {
                 const on = (form.partyAttending ?? []).includes(name);
                 return (
-                  <button
+                  <label
                     key={name}
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        ...form,
-                        partyAttending: on
-                          ? form.partyAttending.filter((item) => item !== name)
-                          : [...form.partyAttending, name],
-                      })
-                    }
-                    className={`w-full rounded-2xl border px-5 py-4 text-left ${on ? "border-forest bg-sage/15" : "border-taupe/20"}`}
+                    className={`flex w-full cursor-pointer items-center gap-4 rounded-2xl border px-5 py-4 text-left ${on ? "border-forest bg-sage/15" : "border-taupe/20"}`}
                   >
-                    {name}
-                  </button>
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 shrink-0 accent-forest"
+                      checked={on}
+                      onChange={() =>
+                        setForm({
+                          ...form,
+                          partyAttending: on
+                            ? form.partyAttending.filter((item) => item !== name)
+                            : [...form.partyAttending, name],
+                        })
+                      }
+                    />
+                    <span className="font-sans text-charcoal">{name}</span>
+                  </label>
                 );
               })}
+              <label className="block pt-2">
+                <span className="label-caps">{t("rsvp.addGuest")}</span>
+                <input
+                  className="input-line"
+                  value={form.extraGuest}
+                  onChange={(event) => setForm({ ...form, extraGuest: event.target.value })}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    const name = form.extraGuest.trim();
+                    if (!name || (form.partyAttending ?? []).some((item) => item.toLowerCase() === name.toLowerCase())) return;
+                    setForm({
+                      ...form,
+                      extraGuest: "",
+                      partyAttending: [...form.partyAttending, name],
+                    });
+                  }}
+                  placeholder={t("rsvp.addGuestPh")}
+                  autoComplete="off"
+                />
+              </label>
             </div>
           ) : null}
 

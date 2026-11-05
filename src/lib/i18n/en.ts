@@ -121,6 +121,8 @@ export const en: Record<string, string> = {
   "rsvp.yes": "Yes",
   "rsvp.no": "No",
   "rsvp.whoComing": "Who in your party is coming?",
+  "rsvp.addGuest": "Add someone else",
+  "rsvp.addGuestPh": "Type a name",
   "rsvp.dietary": "Dietary restrictions",
   "rsvp.dietaryPh": "Vegetarian, no shellfish...",
   "rsvp.song": "Song request",

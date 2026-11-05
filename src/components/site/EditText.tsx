@@ -22,8 +22,10 @@ export function EditText({
 }) {
   const { state, updateSiteCopy } = useHub();
   const { locale, has, t } = useI18n();
-  const english = state.siteCopy[id] ?? children;
-  const value = !state.siteEditing && locale !== "en" && has(id) ? t(id) : english;
+  const saved = state.siteCopy[id];
+  const english = saved || children;
+  const translated = !state.siteEditing && locale !== "en" && has(id) ? t(id) : children;
+  const value = saved || translated;
   const admin = canEditWebsite(state) && state.siteEditing;
   const [draft, setDraft] = useState(value);
   const [open, setOpen] = useState(false);

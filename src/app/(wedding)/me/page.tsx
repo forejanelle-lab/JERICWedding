@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
+import { canEditWebsite, canSeeEvent, isWeekendEventHidden } from "@/lib/hub/access";
 import { PLACES, STAY_LABELS } from "@/lib/hub/content";
 import { guestName, useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
-import type { StayArea } from "@/lib/hub/types";
+import type { EventId, StayArea } from "@/lib/hub/types";
 import { formatDate, formatTime } from "@/lib/hub/utils";
 import { requestRideDigestUnsubscribe } from "@/lib/rides/client";
 
@@ -36,6 +37,13 @@ export default function DashboardPage() {
   }
 
   const myRsvp = state.rsvps.find((item) => item.email === state.identity?.email);
+  const admin = canEditWebsite(state);
+  const listedEvents = ((myRsvp ? myRsvp.events : me.events) ?? []) as EventId[];
+  const visibleEvents = listedEvents.filter((event) => {
+    if (!canSeeEvent(state, event)) return false;
+    if (!admin && isWeekendEventHidden(state, event)) return false;
+    return true;
+  });
   const myRides = state.rides.filter((ride) => ride.authorId === me.id);
   const myAsks = state.seatAsks.filter((ask) => ask.fromGuestId === me.id);
   const saved = PLACES.filter((place) => (state.savedPlaces ?? []).includes(place.id));
@@ -58,7 +66,7 @@ export default function DashboardPage() {
             <p className="label-caps">{t("me.rsvp")}</p>
             <p className="mt-3 font-serif text-2xl">{myRsvp ? (myRsvp.attending ? t("me.confirmed") : t("me.regrets")) : t("me.notSubmitted")}</p>
             <ul className="mt-4 space-y-1 font-sans text-sm text-charcoal/70">
-              {(me.events ?? []).map((event) => (
+              {visibleEvents.map((event) => (
                 <li key={event}>✓ {t(`event.${event}`)}</li>
               ))}
             </ul>

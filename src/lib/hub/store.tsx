@@ -55,6 +55,7 @@ import { queueRideDigest, syncRideDigestEmails } from "@/lib/rides/client";
 const STORAGE_KEY = "jeric-hub-v3";
 const DEFAULT_HERO = "/images/casale-bosco.jpg";
 const dirtySiteImages = new Set<string>();
+const dirtySiteCopy = new Set<string>();
 const siteImageTimes: Record<string, number> = {};
 const dirtyPhotoIds = new Set<string>();
 let queuedSiteContent = false;
@@ -256,10 +257,12 @@ function publishSiteContent(state: HubState) {
     return;
   }
   queuedSiteContent = false;
-  const pending = new Set(dirtySiteImages);
+  const pendingImages = new Set(dirtySiteImages);
+  const pendingCopy = new Set(dirtySiteCopy);
   void syncSiteContent(contentFromState(state)).then((saved) => {
     if (!saved) return;
-    for (const id of pending) dirtySiteImages.delete(id);
+    for (const id of pendingImages) dirtySiteImages.delete(id);
+    for (const id of pendingCopy) dirtySiteCopy.delete(id);
   });
 }
 
@@ -546,9 +549,7 @@ export function HubProvider({
           return prev;
         }
         const invites = mergeInviteLists(prev.invites, remote);
-        if (invites === prev.invites || (invites.length === prev.invites.length && invites.every((invite, index) => invite.id === prev.invites[index]?.id))) {
-          return prev;
-        }
+        if (sameJson(invites, prev.invites)) return prev;
         return { ...prev, invites };
       });
     });
@@ -620,9 +621,15 @@ export function HubProvider({
           const remoteAt = Number(remoteTimes[id] ?? 0);
           if (String(src).startsWith("data:") && (!remoteImages[id] || localAt > remoteAt)) dirtySiteImages.add(id);
         }
+        const remoteCopy = remote.siteCopy && typeof remote.siteCopy === "object" ? remote.siteCopy : {};
+        const siteCopy = { ...remoteCopy };
+        for (const id of dirtySiteCopy) {
+          const local = prev.siteCopy[id];
+          if (typeof local === "string" && local) siteCopy[id] = local;
+        }
         const next = {
           ...prev,
-          siteCopy: { ...remote.siteCopy, ...prev.siteCopy },
+          siteCopy,
           siteImages,
           siteHidden: Array.isArray(remote.siteHidden) ? remote.siteHidden : [],
           hiddenPages: Array.isArray(remote.hiddenPages) ? remote.hiddenPages : [],
@@ -1705,6 +1712,7 @@ export function HubProvider({
   }, []);
 
   const updateSiteCopy = useCallback((id: string, value: string) => {
+    dirtySiteCopy.add(id);
     setState((prev) => {
       const next = { ...prev, siteCopy: { ...prev.siteCopy, [id]: value } };
       publishSiteContent(next);

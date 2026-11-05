@@ -309,6 +309,8 @@ export const it: Record<string, string> = {
   "rsvp.yes": "Sì",
   "rsvp.no": "No",
   "rsvp.whoComing": "Chi della vostra comitiva viene?",
+  "rsvp.addGuest": "Aggiungi qualcun altro",
+  "rsvp.addGuestPh": "Scrivi un nome",
   "rsvp.dietary": "Restrizioni alimentari",
   "rsvp.dietaryPh": "Vegetariano, niente frutti di mare...",
   "rsvp.song": "Richiesta musicale",
