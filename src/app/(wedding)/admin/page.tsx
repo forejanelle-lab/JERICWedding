@@ -758,11 +758,74 @@ function inviteStatus(invite: InviteRecord) {
   return { label: "Invited", className: "bg-cream text-taupe" };
 }
 
+function csvCell(value: string) {
+  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function guestSortName(invite: InviteRecord) {
+  return `${invite.lastName} ${invite.firstName}`.trim();
+}
+
+function sortGuestsAz(invites: InviteRecord[]) {
+  return [...invites].sort((a, b) =>
+    guestSortName(a).localeCompare(guestSortName(b), undefined, { sensitivity: "base" }),
+  );
+}
+
+function exportGuestList(invites: InviteRecord[]) {
+  const header = [
+    "number",
+    "firstName",
+    "lastName",
+    "email",
+    "phone",
+    "address",
+    "location",
+    "inItaly",
+    "party",
+    "events",
+    "tags",
+    "canEditSite",
+  ];
+  const lines = [header.join(",")];
+  invites.forEach((invite, index) => {
+    const events = (invite.events ?? []).map((id) => EVENT_LABELS[id] ?? id).join(", ");
+    lines.push(
+      [
+        String(index + 1),
+        invite.firstName ?? "",
+        invite.lastName ?? "",
+        invite.email ?? "",
+        invite.phone ?? "",
+        invite.address ?? "",
+        invite.location ?? "",
+        invite.inItaly ? "TRUE" : "FALSE",
+        (invite.party ?? []).join(", "),
+        events,
+        (invite.tags ?? []).join(", "),
+        invite.canEditSite ? "TRUE" : "FALSE",
+      ]
+        .map(csvCell)
+        .join(","),
+    );
+  });
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "guest-list.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function InviteManager() {
   const { state, upsertInvite, deleteInvite, importInvites, setInviteCanEditSite } = useHub();
   const [editing, setEditing] = useState<InviteRecord | null>(null);
   const [pendingDelete, setPendingDelete] = useState<InviteRecord | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [sortAz, setSortAz] = useState(false);
+  const listed = sortAz ? sortGuestsAz(state.invites) : state.invites;
   const households = state.invites.length;
   const guests = state.invites.reduce((sum, invite) => sum + inviteHeadcount(invite), 0);
 
@@ -824,12 +887,34 @@ function InviteManager() {
       />
 
       <div>
-        <h2 className="font-serif text-xl uppercase">Guest list</h2>
-        {state.invites.length === 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-xl uppercase">Guest list</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={`min-h-11 rounded-full px-4 font-sans text-[0.62rem] uppercase tracking-[0.14em] ${
+                sortAz ? "bg-forest text-ivory" : "border border-taupe/25 text-charcoal"
+              }`}
+              aria-pressed={sortAz}
+              onClick={() => setSortAz((value) => !value)}
+            >
+              {sortAz ? "A–Z on" : "Sort A–Z"}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary min-h-11"
+              disabled={listed.length === 0}
+              onClick={() => exportGuestList(listed)}
+            >
+              Export list
+            </button>
+          </div>
+        </div>
+        {listed.length === 0 ? (
           <p className="soft-card mt-3 p-5 font-sans text-sm text-taupe">No guests yet. Add one above.</p>
         ) : (
           <ul className="mt-3 divide-y divide-taupe/10 overflow-hidden rounded-2xl border border-taupe/15">
-            {state.invites.map((invite) => {
+            {listed.map((invite, index) => {
               const count = inviteHeadcount(invite);
               const status = inviteStatus(invite);
               const phone = invite.phone?.trim() ?? "";
@@ -842,8 +927,11 @@ function InviteManager() {
                     aria-expanded={open}
                     onClick={() => setOpenId(open ? null : invite.id)}
                   >
-                    <span className="min-w-0 truncate font-sans text-sm font-medium">
-                      {invite.firstName} {invite.lastName}
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="w-7 shrink-0 text-right font-sans text-xs tabular-nums text-taupe">{index + 1}</span>
+                      <span className="min-w-0 truncate font-sans text-sm font-medium">
+                        {invite.firstName} {invite.lastName}
+                      </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="font-sans text-xs text-taupe">{count}</span>

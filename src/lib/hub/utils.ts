@@ -1,4 +1,4 @@
-import type { InviteRecord, WeekendEvent } from "@/lib/hub/types";
+import type { EventId, InviteRecord, WeekendEvent } from "@/lib/hub/types";
 import { DEFAULT_GUEST_TAGS } from "@/lib/hub/access";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -150,10 +150,38 @@ export async function readImageAsCompressedDataUrl(file: File): Promise<string> 
   }
 }
 
+const EVENT_COLUMN: Record<string, EventId> = {
+  welcome: "welcome",
+  welcomeparty: "welcome",
+  welcomedinner: "welcome",
+  ceremony: "ceremony",
+  wedding: "ceremony",
+  reception: "reception",
+  brunch: "brunch",
+  farewellbrunch: "brunch",
+  farewell: "brunch",
+  goodbye: "brunch",
+};
+
+function csvHeaderKey(cell: string) {
+  return cell
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function eventIdsFromCell(value: string): EventId[] {
+  const ids = value
+    .split(/[|,]/)
+    .map((item) => EVENT_COLUMN[item.trim().toLowerCase().replace(/[^a-z0-9]+/g, "")])
+    .filter((item): item is EventId => Boolean(item));
+  return [...new Set(ids)];
+}
+
 export function parseInviteCsv(text: string): InviteRecord[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (lines.length < 2) return [];
-  const header = splitCsvLine(lines[0]).map((cell) => cell.toLowerCase().replace(/\s+/g, ""));
+  const header = splitCsvLine(lines[0]).map(csvHeaderKey);
   const idx = (name: string) => header.indexOf(name);
 
   return lines.slice(1).flatMap((line, index) => {
@@ -161,7 +189,7 @@ export function parseInviteCsv(text: string): InviteRecord[] {
     const get = (name: string) => cells[idx(name)]?.trim() ?? "";
     const firstName = get("firstname") || get("first") || get("name").split(" ")[0];
     const lastName = get("lastname") || get("last") || get("name").split(" ").slice(1).join(" ");
-    if (!firstName || !lastName) return [];
+    if (!firstName) return [];
     const location = get("location") || get("city") || get("from");
     const italyRaw = (get("initaly") || get("italy") || "").toLowerCase();
     const inItaly =
@@ -173,10 +201,7 @@ export function parseInviteCsv(text: string): InviteRecord[] {
       .split(/[,;|]/)
       .map((name) => name.trim())
       .filter(Boolean);
-    const events = (get("events") || "welcome,ceremony,reception,brunch")
-      .split(/[|,]/)
-      .map((item) => item.trim())
-      .filter(Boolean) as InviteRecord["events"];
+    const events = eventIdsFromCell(get("events"));
     return [
       {
         id: `csv-${Date.now()}-${index}`,
