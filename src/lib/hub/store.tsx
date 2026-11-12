@@ -59,6 +59,7 @@ const dirtySiteCopy = new Set<string>();
 const siteImageTimes: Record<string, number> = {};
 const dirtyPhotoIds = new Set<string>();
 let queuedSiteContent = false;
+let guestListEpoch = 0;
 
 function withoutInlineImages(state: HubState): HubState {
   return {
@@ -541,9 +542,11 @@ export function HubProvider({
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
+    const epoch = guestListEpoch;
     void fetchSharedInvites().then((remote) => {
-      if (cancelled) return;
+      if (cancelled || epoch !== guestListEpoch) return;
       setState((prev) => {
+        if (epoch !== guestListEpoch) return prev;
         if (!remote.length) {
           if (prev.adminAuthed && prev.invites.length) void syncSharedInvites(prev.invites);
           return prev;
@@ -561,9 +564,11 @@ export function HubProvider({
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
+    const epoch = guestListEpoch;
     void fetchSharedRsvps().then((remote) => {
-      if (cancelled || !remote.length) return;
+      if (cancelled || epoch !== guestListEpoch || !remote.length) return;
       setState((prev) => {
+        if (epoch !== guestListEpoch) return prev;
         const rsvps = mergeRsvpLists(prev.rsvps, remote);
         if (
           rsvps.length === prev.rsvps.length &&
@@ -1778,17 +1783,30 @@ export function HubProvider({
   }, []);
 
   const resetHub = useCallback(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
+    guestListEpoch += 1;
     window.localStorage.removeItem("jeric-hub-v2");
-    window.localStorage.removeItem("jeric-gate-email");
-    window.localStorage.removeItem("jeric-gate-name");
     void fetch("/api/rides/digest", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/site-editors", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/invites", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/visits", { method: "DELETE" }).catch(() => undefined);
     void fetch("/api/rsvp", { method: "DELETE" }).catch(() => undefined);
-    void fetch("/api/site-content", { method: "DELETE" }).catch(() => undefined);
-    setState({ ...EMPTY_STATE, adminAuthed: true });
+    setState((prev) => ({
+      ...EMPTY_STATE,
+      adminAuthed: true,
+      heroImage: prev.heroImage,
+      siteCopy: prev.siteCopy,
+      siteImages: prev.siteImages,
+      siteHidden: prev.siteHidden,
+      hiddenPages: prev.hiddenPages,
+      photoFolders: prev.photoFolders,
+      gameQuestions: prev.gameQuestions,
+      photoQuestions: prev.photoQuestions,
+      predictionQuestions: prev.predictionQuestions,
+      eventAccess: prev.eventAccess,
+      pageAccess: prev.pageAccess,
+      accessTags: prev.accessTags,
+      announcements: prev.announcements,
+    }));
   }, []);
 
   const value = useMemo<HubContextValue>(
