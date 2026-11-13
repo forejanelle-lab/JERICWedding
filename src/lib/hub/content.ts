@@ -571,7 +571,7 @@ export const FAQ_ITEMS = [
   },
   {
     question: "Where should I stay?",
-    answer: "Naples and Caserta are closest to the venue. Sorrento and the Amalfi Coast are beautiful if you're extending. See Travel for hotel suggestions.",
+    answer: "Naples and Caserta are closest to the venue. Sorrento and the Amalfi Coast are beautiful if you're extending. We'll be at Hotel dei Cavalieri in Caserta.",
   },
   {
     question: "How do I get to the venue?",
@@ -590,39 +590,6 @@ export const FAQ_ITEMS = [
     answer: "We love your little ones, but this is an adults-only celebration so everyone can linger. Thank you for understanding.",
   },
 ];
-
-export const HOTELS = [
-  {
-    name: "Grand Hotel Vesuvio",
-    area: "Naples",
-    distance: "45 minutes from venue",
-    priceRange: "€€€",
-    description: "A landmark Naples hotel with Gulf views and Belle Époque calm. Strong shuttle candidate.",
-    booking: "Mention the Fore wedding for preferred rates. Block details in Updates.",
-    transport: "Easy airport access; private cars and taxis downstairs.",
-    image: "/images/hotel-luxury.jpg",
-  },
-  {
-    name: "Hotel San Francesco al Monte",
-    area: "Naples",
-    distance: "30–40 minutes from venue",
-    priceRange: "€€",
-    description: "A restored monastery with quiet courtyards and a city panorama — our favorite mid-range stay.",
-    booking: "Contact the hotel directly; group block coming soon.",
-    transport: "Near Naples Centrale for Rome trains and airport buses.",
-    image: "/images/naples.jpg",
-  },
-  {
-    name: "Palazzo Avino",
-    area: "Ravello / Amalfi",
-    distance: "About 1 hour from venue",
-    priceRange: "€€€€",
-    description: "Cliffside Ravello for guests extending along the coast. Book early for September.",
-    booking: "Limited September availability — reserve as soon as you can.",
-    transport: "We recommend a driver for the coastal roads.",
-    image: "/images/hotel-boutique.jpg",
-  },
-] as const;
 
 export const AIRPORTS = [
   {

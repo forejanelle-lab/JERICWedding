@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FadeIn } from "@/components/ui/FadeIn";
-import { EditImage } from "@/components/site/EditImage";
 import { EditText } from "@/components/site/EditText";
 import { PageHeader, SectionWrap } from "@/components/site/PageHeader";
-import { AIRPORTS, HOTELS } from "@/lib/hub/content";
+import { AIRPORTS } from "@/lib/hub/content";
 import { canSeePage } from "@/lib/hub/access";
 import { mapsUrl } from "@/lib/hub/utils";
 import { useHub } from "@/lib/hub/store";
@@ -96,55 +94,17 @@ export default function TravelPage() {
         <EditText id="travel.stay" as="h2" className="mb-8 font-serif text-3xl font-light tracking-[0.1em] uppercase">
           Where to stay
         </EditText>
-        <article className="mb-12 rounded-2xl border border-olive/20 bg-ivory px-6 py-8 md:px-8">
+        <article className="rounded-2xl border border-olive/20 bg-ivory px-6 py-8 md:px-8">
           <EditText id="travel.coupleStay.kicker" as="p" className="label-caps">
             Where the bride and groom are staying
           </EditText>
           <EditText id="travel.coupleStay.place" as="h3" className="mt-3 font-serif text-3xl font-light uppercase">
-            Casale dei Mascioni
+            Hotel dei Cavalieri
           </EditText>
           <EditText id="travel.coupleStay.body" as="p" multiline className="mt-3 max-w-2xl font-sans leading-relaxed text-charcoal/70">
-            We'll be on the estate for the wedding weekend — same place as the ceremony.
+            We'll be at Hotel dei Cavalieri in Caserta for the wedding weekend — Piazza Vanvitelli, a short walk from the Royal Palace.
           </EditText>
         </article>
-        <div className="mb-10 flex items-center gap-4">
-          <span className="h-px flex-1 bg-taupe/20" />
-          <EditText id="travel.stay.guests" as="p" className="font-sans text-[0.62rem] uppercase tracking-[0.22em] text-taupe">
-            Hotels for guests
-          </EditText>
-          <span className="h-px flex-1 bg-taupe/20" />
-        </div>
-        <div className="space-y-16">
-          {HOTELS.map((hotel, index) => (
-            <FadeIn key={hotel.name}>
-              <article className={`grid items-center gap-8 lg:grid-cols-2 ${index % 2 === 1 ? "lg:[&>*:first-child]:order-2" : ""}`}>
-                <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-                  <EditImage id={`travel.hotel.${index}.image`} src={hotel.image} alt={hotel.name} fill className="object-cover" />
-                </div>
-                <div>
-                  <EditText id={`travel.hotel.${index}.meta`} as="p" className="label-caps">
-                    {`${hotel.area} · ${hotel.priceRange}`}
-                  </EditText>
-                  <EditText id={`travel.hotel.${index}.name`} as="h3" className="mt-2 font-serif text-3xl font-light uppercase">
-                    {hotel.name}
-                  </EditText>
-                  <EditText id={`travel.hotel.${index}.distance`} as="p" className="mt-2 font-sans text-sm text-taupe">
-                    {hotel.distance}
-                  </EditText>
-                  <EditText id={`travel.hotel.${index}.description`} as="p" multiline className="mt-4 font-sans leading-relaxed text-charcoal/70">
-                    {hotel.description}
-                  </EditText>
-                  <EditText id={`travel.hotel.${index}.booking`} as="p" multiline className="mt-4 font-sans text-sm text-charcoal/60">
-                    {hotel.booking}
-                  </EditText>
-                  <EditText id={`travel.hotel.${index}.transport`} as="p" multiline className="mt-2 font-sans text-sm text-charcoal/60">
-                    {hotel.transport}
-                  </EditText>
-                </div>
-              </article>
-            </FadeIn>
-          ))}
-        </div>
         {showRides ? (
         <p className="mt-12 font-sans text-sm text-taupe">
           {t("travel.rideLead")}{" "}
