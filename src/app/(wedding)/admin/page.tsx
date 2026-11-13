@@ -116,10 +116,6 @@ export default function AdminPage() {
               <div className="mt-4"><GameEditor kind="trivia" /></div>
             </section>
             <section>
-              <h2 className="font-serif text-2xl uppercase">Guess the photo</h2>
-              <div className="mt-4"><GameEditor kind="photos" /></div>
-            </section>
-            <section>
               <h2 className="font-serif text-2xl uppercase">Predictions</h2>
               <div className="mt-4"><GameEditor kind="predictions" /></div>
             </section>

@@ -9,7 +9,6 @@ const GAMES = [
   { href: "/play/know-us", title: "How well do you know us?", blurb: "Who said I love you first, who takes longer to get ready, who planned the trip." },
   { href: "/play/trivia", title: "Wedding trivia", blurb: "Janelle, Eric, Italy, family, and the weekend itself." },
   { href: "/play/predictions", title: "Predictions", blurb: "Who cries first, last song standing — answers after the wedding." },
-  { href: "/play/photos", title: "Guess the photo", blurb: "Childhood energy, engagement light, travel stills." },
 ];
 
 export default function PlayPage() {

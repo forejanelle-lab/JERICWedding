@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { HIDEABLE_PAGES } from "@/lib/hub/content";
 import { useHub } from "@/lib/hub/store";
-import { readImageAsCompressedDataUrl } from "@/lib/hub/utils";
-import type { PhotoQuestion, PredictionQuestion, QuizQuestion } from "@/lib/hub/types";
+import type { PredictionQuestion, QuizQuestion } from "@/lib/hub/types";
 
 function uid() {
   return `q-${Math.random().toString(36).slice(2, 8)}`;
@@ -13,13 +12,10 @@ function uid() {
 export function GameEditor({
   kind,
 }: {
-  kind: "know-us" | "trivia" | "photos" | "predictions";
+  kind: "know-us" | "trivia" | "predictions";
 }) {
-  const { state, setGameQuestions, setPhotoQuestions, setPredictionQuestions } = useHub();
+  const { state, setGameQuestions, setPredictionQuestions } = useHub();
 
-  if (kind === "photos") {
-    return <PhotoEditor questions={state.photoQuestions} onChange={setPhotoQuestions} />;
-  }
   if (kind === "predictions") {
     return <PredictionEditor questions={state.predictionQuestions} onChange={setPredictionQuestions} />;
   }
@@ -124,125 +120,6 @@ function QuizEditor({
           onChange([
             ...questions,
             { id: uid(), question: "New question", options: ["A", "B", "C", "D"], correctIndex: 0, explanation: "" },
-          ])
-        }
-      >
-        Add question
-      </button>
-    </div>
-  );
-}
-
-function PhotoEditor({
-  questions,
-  onChange,
-}: {
-  questions: PhotoQuestion[];
-  onChange: (questions: PhotoQuestion[]) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      {questions.map((question, index) => (
-        <article key={question.id} className="soft-card space-y-3 p-4">
-          <label className="block">
-            <span className="label-caps">Prompt {index + 1}</span>
-            <input
-              className="input-line"
-              value={question.prompt}
-              onChange={(event) =>
-                onChange(questions.map((item) => (item.id === question.id ? { ...item, prompt: event.target.value } : item)))
-              }
-            />
-          </label>
-          <div>
-            <span className="label-caps">Photo</span>
-            <div className="mt-2 overflow-hidden rounded-2xl border border-taupe/15 bg-cream">
-              {question.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={question.image} alt="" className="aspect-[4/5] w-full object-cover" />
-              ) : (
-                <div className="flex aspect-[4/5] items-center justify-center font-sans text-sm text-taupe">
-                  No photo yet
-                </div>
-              )}
-            </div>
-            <label className="btn-secondary mt-3 inline-flex cursor-pointer !px-4 !py-2">
-              {question.image ? "Replace photo" : "Upload photo"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  const image = await readImageAsCompressedDataUrl(file);
-                  onChange(questions.map((item) => (item.id === question.id ? { ...item, image } : item)));
-                  event.target.value = "";
-                }}
-              />
-            </label>
-          </div>
-          {question.options.map((option, optionIndex) => (
-            <label key={optionIndex} className="flex items-center gap-2">
-              <input
-                type="radio"
-                name={`${question.id}-correct`}
-                checked={question.correctIndex === optionIndex}
-                onChange={() =>
-                  onChange(questions.map((item) => (item.id === question.id ? { ...item, correctIndex: optionIndex } : item)))
-                }
-              />
-              <input
-                className="input-line flex-1"
-                value={option}
-                onChange={(event) =>
-                  onChange(
-                    questions.map((item) =>
-                      item.id === question.id
-                        ? {
-                            ...item,
-                            options: item.options.map((choice, i) => (i === optionIndex ? event.target.value : choice)),
-                          }
-                        : item,
-                    ),
-                  )
-                }
-              />
-            </label>
-          ))}
-          <label className="block">
-            <span className="label-caps">Answer note</span>
-            <input
-              className="input-line"
-              value={question.explanation}
-              onChange={(event) =>
-                onChange(questions.map((item) => (item.id === question.id ? { ...item, explanation: event.target.value } : item)))
-              }
-            />
-          </label>
-          <button
-            type="button"
-            className="btn-secondary !px-3 !py-2"
-            onClick={() => onChange(questions.filter((item) => item.id !== question.id))}
-          >
-            Delete question
-          </button>
-        </article>
-      ))}
-      <button
-        type="button"
-        className="btn-secondary"
-        onClick={() =>
-          onChange([
-            ...questions,
-            {
-              id: uid(),
-              image: "",
-              prompt: "New photo prompt",
-              options: ["A", "B", "C", "D"],
-              correctIndex: 0,
-              explanation: "",
-            },
           ])
         }
       >

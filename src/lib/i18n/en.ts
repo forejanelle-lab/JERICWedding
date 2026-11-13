@@ -318,7 +318,6 @@ export const en: Record<string, string> = {
   "leaderboard.overall": "Overall",
   "leaderboard.knowUs": "Trivia / Know us",
   "leaderboard.predictions": "Predictions",
-  "leaderboard.photos": "Photo game",
 
   "registry.view": "View registry",
   "travel.rideBoard": "ride board",
@@ -341,6 +340,5 @@ export const en: Record<string, string> = {
   "play.predictions.save": "Save predictions · +60 pts",
   "play.predictions.update": "Update predictions",
   "play.predictions.saved": "Saved. Results reveal after September 5, 2027.",
-  "play.photos.kicker": "Game 4 · {n}/{total}",
   "joinPrompt.cta": "Join with your name",
 };

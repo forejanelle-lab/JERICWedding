@@ -7,10 +7,9 @@ import { guestName, useHub } from "@/lib/hub/store";
 import { useI18n } from "@/lib/i18n/LanguageProvider";
 
 const CATS = [
-  { id: "overall", label: "Overall" },
-  { id: "know-us", label: "Trivia / Know us" },
-  { id: "predictions", label: "Predictions" },
-  { id: "photos", label: "Photo game" },
+  { id: "overall", key: "leaderboard.overall" },
+  { id: "know-us", key: "leaderboard.knowUs" },
+  { id: "predictions", key: "leaderboard.predictions" },
 ] as const;
 
 export default function LeaderboardPage() {
@@ -52,15 +51,7 @@ export default function LeaderboardPage() {
                 cat === item.id ? "bg-forest text-ivory" : "bg-cream"
               }`}
             >
-              {t(
-                item.id === "overall"
-                  ? "leaderboard.overall"
-                  : item.id === "know-us"
-                    ? "leaderboard.knowUs"
-                    : item.id === "predictions"
-                      ? "leaderboard.predictions"
-                      : "leaderboard.photos",
-              )}
+              {t(item.key)}
             </button>
           ))}
         </div>
