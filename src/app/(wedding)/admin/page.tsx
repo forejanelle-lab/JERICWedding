@@ -100,7 +100,12 @@ export default function AdminPage() {
           </div>
         ) : null}
 
-        {tab === "access" ? <AccessTagEditor /> : null}
+        {tab === "access" ? (
+          <div className="space-y-10">
+            <RegistryLinkEditor />
+            <AccessTagEditor />
+          </div>
+        ) : null}
 
         {tab === "games" ? (
           <div className="space-y-10">
@@ -1184,6 +1189,60 @@ function InviteForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+function RegistryLinkEditor() {
+  const { state, updateSiteCopy } = useHub();
+  const saved = state.siteCopy["registry.url"] ?? "";
+  const [value, setValue] = useState(saved);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    setValue(saved);
+  }, [saved]);
+
+  return (
+    <section className="soft-card max-w-xl space-y-3 p-5">
+      <h2 className="font-serif text-2xl uppercase">Registry button</h2>
+      <p className="font-sans text-sm text-charcoal/70">
+        Paste the link guests open from View registry. Leave it blank and save to hide the button.
+      </p>
+      <input
+        className="input-line"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder="https://"
+        inputMode="url"
+        autoComplete="off"
+      />
+      <button
+        type="button"
+        className="btn-primary"
+        onClick={() => {
+          const next = value.trim();
+          if (!next) {
+            updateSiteCopy("registry.url", "");
+            setNote("Button hidden.");
+            return;
+          }
+          try {
+            const url = new URL(next);
+            if (url.protocol !== "https:" && url.protocol !== "http:") {
+              setNote("Use a full link, starting with https://");
+              return;
+            }
+            updateSiteCopy("registry.url", url.toString());
+            setNote("Saved.");
+          } catch {
+            setNote("Use a full link, starting with https://");
+          }
+        }}
+      >
+        Save link
+      </button>
+      {note ? <p className="font-sans text-sm text-taupe">{note}</p> : null}
+    </section>
   );
 }
 

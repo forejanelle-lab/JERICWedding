@@ -630,7 +630,7 @@ export function HubProvider({
         const siteCopy = { ...remoteCopy };
         for (const id of dirtySiteCopy) {
           const local = prev.siteCopy[id];
-          if (typeof local === "string" && local) siteCopy[id] = local;
+          if (typeof local === "string") siteCopy[id] = local;
         }
         const next = {
           ...prev,
